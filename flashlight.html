@@ -1,677 +1,1050 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<title>Morse Flashlight</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #0a0a0f; color: #e0e0e0;
-    min-height: 100vh; display: flex; flex-direction: column;
-  }
-  header { text-align: center; padding: 24px 16px 12px; }
-  header h1 { font-size: 1.6rem; letter-spacing: 2px; color: #fff; }
-  header p { font-size: 0.8rem; color: #888; margin-top: 4px; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Morse Code Flashlight</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .tabs {
-    display: flex; margin: 0 16px;
-    border-radius: 12px; overflow: hidden; background: #1a1a2e;
-  }
-  .tab {
-    flex: 1; padding: 12px; text-align: center; cursor: pointer;
-    font-size: 0.95rem; font-weight: 600; color: #888; transition: all 0.2s;
-    border: none; background: transparent;
-  }
-  .tab.active { background: #4f8ef7; color: #fff; border-radius: 12px; }
+    :root {
+      --bg: #0a0a0f;
+      --surface: #14141f;
+      --surface2: #1e1e2e;
+      --border: #2a2a3e;
+      --text: #e0e0e8;
+      --text-dim: #8888a0;
+      --accent: #f0c040;
+      --accent-glow: #f0c04066;
+      --dot: #f0c040;
+      --dash: #e09020;
+      --danger: #e04040;
+      --success: #40c080;
+    }
 
-  .panel { display: none; padding: 20px 16px; flex-direction: column; gap: 16px; }
-  .panel.active { display: flex; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
 
-  textarea {
-    width: 100%; padding: 14px; border-radius: 12px;
-    background: #1a1a2e; border: 1px solid #2a2a4a;
-    color: #fff; font-size: 1rem; resize: none; height: 100px; outline: none;
-  }
-  textarea:focus { border-color: #4f8ef7; }
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 20px 16px 12px;
+    }
+    .header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .header h1 span { color: var(--accent); }
+    .header p { font-size: 0.8rem; color: var(--text-dim); margin-top: 4px; }
 
-  .morse-display {
-    background: #1a1a2e; border-radius: 12px; padding: 14px;
-    font-family: monospace; font-size: 1.1rem; letter-spacing: 3px;
-    color: #4f8ef7; min-height: 50px; word-break: break-all; line-height: 1.8;
-  }
+    /* Mode Tabs */
+    .mode-tabs {
+      display: flex;
+      gap: 4px;
+      padding: 0 16px;
+      margin-bottom: 16px;
+    }
+    .mode-tab {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      color: var(--text-dim);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .mode-tab.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--surface2);
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+    .mode-tab svg {
+      display: block;
+      margin: 0 auto 6px;
+    }
 
-  .speed-row { display: flex; align-items: center; gap: 12px; }
-  .speed-row label { font-size: 0.85rem; color: #888; white-space: nowrap; }
-  input[type=range] { flex: 1; accent-color: #4f8ef7; }
+    /* Panels */
+    .panel { display: none; padding: 0 16px 24px; }
+    .panel.active { display: block; }
 
-  button.main-btn {
-    padding: 16px; border-radius: 14px; border: none;
-    font-size: 1.1rem; font-weight: 700; cursor: pointer;
-    transition: all 0.15s; width: 100%;
-  }
-  .btn-blue  { background: #4f8ef7; color: #fff; }
-  .btn-blue:active { background: #2d6ed6; }
-  .btn-red   { background: #e74c3c; color: #fff; }
-  .btn-green { background: #2ecc71; color: #fff; }
-  .btn-green.recording { background: #e74c3c; }
-  .btn-orange { background: #e67e22; color: #fff; }
-  button:disabled { background: #2a2a4a !important; color: #555 !important; cursor: default; }
+    /* Transmit Panel */
+    .input-group { margin-bottom: 16px; }
+    .input-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .text-input {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 1rem;
+      resize: none;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .text-input:focus { border-color: var(--accent); }
+    .text-input::placeholder { color: var(--text-dim); }
 
-  .status-dot {
-    width: 12px; height: 12px; border-radius: 50%;
-    background: #333; display: inline-block; margin-right: 8px; transition: background 0.1s;
-  }
-  .status-bar {
-    display: flex; align-items: center; padding: 10px 14px;
-    background: #1a1a2e; border-radius: 10px; font-size: 0.9rem;
-  }
+    .morse-preview {
+      padding: 14px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      font-family: 'Courier New', monospace;
+      font-size: 1.3rem;
+      letter-spacing: 3px;
+      min-height: 50px;
+      word-break: break-all;
+      color: var(--accent);
+    }
 
-  #receive-output {
-    background: #1a1a2e; border-radius: 12px; padding: 14px;
-    min-height: 80px; font-size: 1.1rem; color: #2ecc71;
-    word-break: break-word; line-height: 1.7;
-  }
-  #receive-morse {
-    background: #1a1a2e; border-radius: 12px; padding: 14px;
-    font-family: monospace; font-size: 1rem; color: #888;
-    min-height: 40px; word-break: break-all; letter-spacing: 2px;
-  }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .speed-control input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
+      height: 6px;
+    }
+    .speed-value {
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 55px;
+      text-align: right;
+      font-size: 0.9rem;
+    }
 
-  .calib-box {
-    background: #1a1a2e; border: 1px solid #2a2a4a;
-    border-radius: 12px; padding: 14px; font-size: 0.85rem;
-    line-height: 1.8; color: #aaa;
-  }
-  .calib-box strong { color: #fff; }
-  .calib-value { color: #4f8ef7; font-family: monospace; font-size: 1rem; }
-  .calib-ok    { color: #2ecc71; }
-  .calib-warn  { color: #e67e22; }
+    .tx-btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 14px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .tx-btn.start {
+      background: var(--accent);
+      color: #000;
+    }
+    .tx-btn.start:active { transform: scale(0.97); }
+    .tx-btn.stop {
+      background: var(--danger);
+      color: #fff;
+    }
+    .tx-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
 
-  .hint { font-size: 0.78rem; color: #555; text-align: center; line-height: 1.5; }
-  canvas#camCanvas { display: none; }
-  .light-meter { height: 8px; border-radius: 4px; background: #1a1a2e; overflow: hidden; }
-  .light-meter-fill { height: 100%; width: 0%; background: #2ecc71; transition: width 0.05s; border-radius: 4px; }
-  .section-label { font-size: 0.75rem; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -8px; }
-  .device-badge {
-    text-align: center; font-size: 0.75rem; padding: 4px 10px;
-    background: #1a1a2e; border-radius: 20px; color: #555; margin: 0 auto; width: fit-content;
-  }
-  .row { display: flex; gap: 10px; }
-  .row .main-btn { flex: 1; }
-</style>
+    .tx-status {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      min-height: 22px;
+    }
+
+    .flash-indicator {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin: 16px auto;
+      background: var(--surface2);
+      border: 3px solid var(--border);
+      transition: all 0.05s;
+    }
+    .flash-indicator.on {
+      background: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 0 40px var(--accent), 0 0 80px var(--accent-glow);
+    }
+
+    .current-char {
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+      min-height: 48px;
+      line-height: 48px;
+    }
+    .current-morse {
+      text-align: center;
+      font-family: 'Courier New', monospace;
+      font-size: 1.8rem;
+      letter-spacing: 6px;
+      color: var(--text);
+      min-height: 36px;
+      margin-bottom: 8px;
+    }
+
+    /* Receive Panel */
+    .camera-container {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid var(--border);
+      margin-bottom: 16px;
+      background: #000;
+      aspect-ratio: 4/3;
+    }
+    .camera-container video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .camera-container canvas { display: none; }
+    .roi-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px;
+      height: 80px;
+      border: 3px solid var(--accent);
+      border-radius: 50%;
+      pointer-events: none;
+      box-shadow: 0 0 0 2000px rgba(0,0,0,0.3);
+    }
+    .roi-label {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.7rem;
+      color: var(--accent);
+      background: rgba(0,0,0,0.7);
+      padding: 3px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .brightness-bar-container {
+      margin-bottom: 16px;
+    }
+    .brightness-bar-bg {
+      height: 12px;
+      border-radius: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .brightness-bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.05s, background 0.1s;
+    }
+    .brightness-bar-fill.bright {
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+    .brightness-bar-fill.dim {
+      background: var(--text-dim);
+    }
+    .threshold-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--danger);
+      pointer-events: none;
+    }
+    .brightness-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    .rx-btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+    .rx-btn.start { background: var(--success); color: #000; }
+    .rx-btn.stop { background: var(--danger); color: #fff; }
+
+    .decoded-section {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .decoded-section h3 {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .decoded-morse {
+      font-family: 'Courier New', monospace;
+      font-size: 1.2rem;
+      letter-spacing: 3px;
+      color: var(--accent);
+      min-height: 30px;
+      word-break: break-all;
+    }
+    .decoded-text {
+      font-size: 1.3rem;
+      font-weight: 600;
+      min-height: 36px;
+      color: var(--text);
+      word-break: break-all;
+    }
+
+    .rx-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .rx-control label {
+      display: block;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .rx-control input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+    .rx-control .val {
+      font-size: 0.8rem;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .rx-status {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      min-height: 22px;
+      margin-bottom: 12px;
+    }
+
+    .clear-btn {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    /* Torch fallback screen flash */
+    .screen-flash {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #fff;
+      z-index: 9999;
+      pointer-events: none;
+    }
+    .screen-flash.on { display: block; }
+
+    /* Reference Card */
+    .ref-card {
+      margin-top: 20px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .ref-card summary {
+      padding: 12px 14px;
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+    .ref-table {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      padding: 1px;
+    }
+    .ref-item {
+      background: var(--surface);
+      padding: 8px 6px;
+      text-align: center;
+    }
+    .ref-item .char {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--accent);
+    }
+    .ref-item .code {
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    /* Info callout */
+    .info-box {
+      background: var(--surface2);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 10px 12px;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+  </style>
 </head>
 <body>
-<header>
-  <h1>⚡ MORSE LIGHT</h1>
-  <p>Flashlight Morse Code Communicator <br> Now with Calibration!</p>
-</header>
-<div class="device-badge" id="deviceBadge">Detecting...</div>
-<br>
-<div class="tabs">
-  <button class="tab active" onclick="switchTab('send')">📡 Transmit</button>
-  <button class="tab" onclick="switchTab('receive')">📷 Receive</button>
-  <button class="tab" onclick="switchTab('ref')">📖 Reference</button>
+
+<div class="screen-flash" id="screenFlash"></div>
+
+<div class="header">
+  <h1><span>Morse</span> Flashlight</h1>
+  <p>Transmit and receive Morse code with light</p>
 </div>
 
-<!-- ══ TRANSMIT ══ -->
-<div id="panel-send" class="panel active">
-  <p class="section-label">Message</p>
-  <textarea id="msgInput" placeholder="Type your message here..." oninput="updateMorse()"></textarea>
-
-  <p class="section-label">Morse Preview</p>
-  <div class="morse-display" id="morsePreview">—</div>
-
-  <div class="speed-row">
-    <label>Speed: <span id="speedLabel">Medium</span></label>
-    <input type="range" id="speedSlider" min="1" max="5" value="3" oninput="updateSpeedLabel()">
-  </div>
-
-  <div class="status-bar">
-    <span class="status-dot" id="flashDot"></span>
-    <span id="sendStatus">Ready</span>
-  </div>
-
-  <div class="row">
-    <button class="main-btn btn-orange" id="calibBtn" onclick="startCalibTransmit()">📶 Send Calibration</button>
-    <button class="main-btn btn-blue"   id="sendBtn"  onclick="startTransmit()">⚡ Transmit</button>
-  </div>
-  <button class="main-btn btn-red" id="stopBtn" onclick="stopTransmit()" style="display:none">⛔ Stop</button>
-
-  <p class="hint">Step 1: Both phones point at each other. Tap <strong>Send Calibration</strong> while the other phone taps <strong>Run Calibration</strong>. Then transmit your message.</p>
+<div class="mode-tabs">
+  <button class="mode-tab active" data-mode="transmit" id="tabTransmit">
+    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+      <circle cx="12" cy="12" r="4"/>
+    </svg>
+    Transmit
+  </button>
+  <button class="mode-tab" data-mode="receive" id="tabReceive">
+    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+    Receive
+  </button>
 </div>
 
-<!-- ══ RECEIVE ══ -->
-<div id="panel-receive" class="panel">
-  <div class="status-bar">
-    <span class="status-dot" id="rxDot"></span>
-    <span id="rxStatus">Press Start to begin</span>
-  </div>
-  <div class="light-meter"><div class="light-meter-fill" id="lightMeter"></div></div>
-
-  <!-- Calibration result display -->
-  <div class="calib-box" id="calibResult">
-    <strong>Timing Calibration</strong><br>
-    Dot unit: <span class="calib-value" id="cr-dot">not set</span><br>
-    Dash threshold: <span class="calib-value" id="cr-dash">not set</span><br>
-    Gap threshold: <span class="calib-value" id="cr-gap">not set</span><br>
-    Status: <span id="cr-status" class="calib-warn">⚠ Run calibration before receiving</span>
+<!-- TRANSMIT PANEL -->
+<div class="panel active" id="panelTransmit">
+  <div class="input-group">
+    <label>Message</label>
+    <textarea class="text-input" id="txInput" rows="2" placeholder="Type your message..." maxlength="200"></textarea>
   </div>
 
-  <div class="row">
-    <button class="main-btn btn-orange" id="runCalibBtn" onclick="toggleCalib()">📶 Run Calibration</button>
-    <button class="main-btn btn-green"  id="rxBtn"       onclick="toggleReceive()">📷 Start Receiving</button>
+  <div class="input-group">
+    <label>Morse Preview</label>
+    <div class="morse-preview" id="morsePreview"></div>
   </div>
-  <button class="main-btn btn-red" onclick="clearReceived()">🗑 Clear</button>
 
-  <p class="section-label">Decoded Morse</p>
-  <div id="receive-morse">—</div>
-  <p class="section-label">Decoded Text</p>
-  <div id="receive-output">—</div>
+  <div class="input-group">
+    <label>Speed</label>
+    <div class="speed-control">
+      <span style="font-size:0.8rem;color:var(--text-dim)">Slow</span>
+      <input type="range" id="txSpeed" min="40" max="200" value="100">
+      <span style="font-size:0.8rem;color:var(--text-dim)">Fast</span>
+      <span class="speed-value" id="txSpeedVal">100 ms</span>
+    </div>
+  </div>
 
-  <canvas id="camCanvas"></canvas>
-  <video id="camVideo" autoplay playsinline muted style="display:none"></video>
+  <div class="flash-indicator" id="flashIndicator"></div>
+  <div class="current-char" id="currentChar"></div>
+  <div class="current-morse" id="currentMorse"></div>
 
-  <p class="hint">Point this phone's camera directly at the other phone's flashlight. Works best in a dim room ~1–3 feet apart.</p>
+  <button class="tx-btn start" id="txBtn" onclick="toggleTransmit()">Start Transmitting</button>
+  <div class="tx-status" id="txStatus"></div>
+
+  <div class="info-box">
+    <strong>Tip:</strong> This uses your phone's rear flashlight (torch). On devices without torch support, the screen will flash white instead. Point the flashlight at the receiving phone's camera.
+  </div>
+
+  <details class="ref-card">
+    <summary>Morse Code Reference</summary>
+    <div class="ref-table" id="refTable"></div>
+  </details>
 </div>
 
-<!-- ══ REFERENCE ══ -->
-<div id="panel-ref" class="panel">
-  <p style="color:#888;font-size:0.9rem;">International Morse Code:</p>
-  <div id="refGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-family:monospace;"></div>
+<!-- RECEIVE PANEL -->
+<div class="panel" id="panelReceive">
+  <div class="info-box">
+    Point your camera at the transmitting phone's flashlight. Keep the light source centered in the circle. Tap <strong>Start Listening</strong> to begin decoding.
+  </div>
+
+  <div class="camera-container">
+    <video id="rxVideo" autoplay playsinline muted></video>
+    <canvas id="rxCanvas"></canvas>
+    <div class="roi-overlay" id="roiOverlay"></div>
+    <div class="roi-label">Aim light here</div>
+  </div>
+
+  <div class="brightness-bar-container">
+    <div class="brightness-bar-bg">
+      <div class="brightness-bar-fill" id="brightnessFill"></div>
+      <div class="threshold-line" id="thresholdLine"></div>
+    </div>
+    <div class="brightness-labels">
+      <span>Dark</span>
+      <span id="brightnessVal">0</span>
+      <span>Bright</span>
+    </div>
+  </div>
+
+  <div class="rx-controls">
+    <div class="rx-control">
+      <label>Sensitivity</label>
+      <input type="range" id="rxSensitivity" min="5" max="80" value="30">
+      <span class="val" id="rxSensVal">30</span>
+    </div>
+    <div class="rx-control">
+      <label>Expected Speed</label>
+      <input type="range" id="rxSpeed" min="40" max="200" value="100">
+      <span class="val" id="rxSpeedVal">100 ms</span>
+    </div>
+  </div>
+
+  <button class="rx-btn start" id="rxBtn" onclick="toggleReceive()">Start Listening</button>
+  <div class="rx-status" id="rxStatus">Camera inactive</div>
+
+  <div class="decoded-section">
+    <h3>Morse Symbols</h3>
+    <div class="decoded-morse" id="decodedMorse"></div>
+  </div>
+  <div class="decoded-section">
+    <h3>Decoded Text</h3>
+    <div class="decoded-text" id="decodedText"></div>
+  </div>
+
+  <button class="clear-btn" onclick="clearDecoded()">Clear Decoded Text</button>
 </div>
 
 <script>
-// ── Morse tables ──────────────────────────────────────────────────────────────
-const MORSE = {
-  'A':'.-','B':'-...','C':'-.-.','D':'-..','E':'.','F':'..-.','G':'--.','H':'....','I':'..','J':'.---',
-  'K':'-.-','L':'.-..','M':'--','N':'-.','O':'---','P':'.--.','Q':'--.-','R':'.-.','S':'...','T':'-',
-  'U':'..-','V':'...-','W':'.--','X':'-..-','Y':'-.--','Z':'--..',
-  '0':'-----','1':'.----','2':'..---','3':'...--','4':'....-','5':'.....','6':'-....','7':'--...','8':'---..','9':'----.',
-  '.':'.-.-.-',',':'--..--','?':'..--..','!':'-.-.--','/':'-..-.','@':'.--.-.'
+// ===== MORSE CODE TABLE =====
+const MORSE_TABLE = {
+  'A': '.-',    'B': '-...',  'C': '-.-.',  'D': '-..',
+  'E': '.',     'F': '..-.',  'G': '--.',   'H': '....',
+  'I': '..',    'J': '.---',  'K': '-.-',   'L': '.-..',
+  'M': '--',    'N': '-.',    'O': '---',   'P': '.--.',
+  'Q': '--.-',  'R': '.-.',   'S': '...',   'T': '-',
+  'U': '..-',   'V': '...-',  'W': '.--',   'X': '-..-',
+  'Y': '-.--',  'Z': '--..',
+  '0': '-----', '1': '.----', '2': '..---', '3': '...--',
+  '4': '....-', '5': '.....', '6': '-....', '7': '--...',
+  '8': '---..', '9': '----.',
+  '.': '.-.-.-', ',': '--..--', '?': '..--..', '!': '-.-.--',
+  '/': '-..-.',  '(': '-.--.',  ')': '-.--.-', '&': '.-...',
+  ':': '---...', ';': '-.-.-.', '=': '-...-',  '+': '.-.-.',
+  '-': '-....-', '_': '..--.-', '"': '.-..-.', '$': '...-..-',
+  '@': '.--.-.', "'": '.----.',
 };
-const MORSE_REV = Object.fromEntries(Object.entries(MORSE).map(([k,v])=>[v,k]));
 
-// ── Device detection ──────────────────────────────────────────────────────────
-document.getElementById('deviceBadge').textContent =
-  /iPad|iPhone|iPod/.test(navigator.userAgent) ? '🍎 iOS Device' :
-  /Android/.test(navigator.userAgent)          ? '🤖 Android Device' : '💻 Desktop Browser';
+const REVERSE_MORSE = {};
+for (const [char, code] of Object.entries(MORSE_TABLE)) {
+  REVERSE_MORSE[code] = char;
+}
 
-// ── Reference grid ────────────────────────────────────────────────────────────
-const refGrid = document.getElementById('refGrid');
-Object.entries(MORSE).forEach(([ch,code]) => {
-  const el = document.createElement('div');
-  el.style.cssText = 'background:#1a1a2e;padding:8px 10px;border-radius:8px;display:flex;justify-content:space-between;';
-  el.innerHTML = `<span style="color:#fff;font-weight:700">${ch}</span><span style="color:#4f8ef7">${code}</span>`;
-  refGrid.appendChild(el);
+function textToMorse(text) {
+  return text.toUpperCase().split('').map(ch => {
+    if (ch === ' ') return '/';
+    return MORSE_TABLE[ch] || '';
+  }).filter(Boolean).join(' ');
+}
+
+function morseToText(morse) {
+  return morse.split(' / ').map(word =>
+    word.split(' ').map(code => REVERSE_MORSE[code] || '').join('')
+  ).join(' ');
+}
+
+// ===== MODE SWITCHING =====
+const tabs = document.querySelectorAll('.mode-tab');
+const panels = document.querySelectorAll('.panel');
+
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    panels.forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel' + capitalize(tab.dataset.mode)).classList.add('active');
+  });
 });
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function textToMorse(txt) {
-  return txt.toUpperCase().split('').map(c => c === ' ' ? '/' : (MORSE[c] || '')).filter(x=>x).join(' ');
-}
-function updateMorse() {
-  document.getElementById('morsePreview').textContent = textToMorse(document.getElementById('msgInput').value) || '—';
-}
-const speedLabels = ['Very Slow','Slow','Medium','Fast','Very Fast'];
-const speedDots   = [300, 200, 130, 80, 50];
-function updateSpeedLabel() {
-  document.getElementById('speedLabel').textContent = speedLabels[+document.getElementById('speedSlider').value-1];
-}
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
-// ── Wake Lock ─────────────────────────────────────────────────────────────────
-let wakeLock = null;
-async function requestWakeLock() {
-  if ('wakeLock' in navigator) try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
-}
-function releaseWakeLock() { if (wakeLock) { wakeLock.release(); wakeLock = null; } }
-
-// ── Torch ─────────────────────────────────────────────────────────────────────
-async function getTorchTrack() {
-  for (const c of [
-    { video: { facingMode: { exact: 'environment' } } },
-    { video: { facingMode: 'environment' } },
-    { video: true }
-  ]) {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia(c);
-      const track  = stream.getVideoTracks()[0];
-      try { await track.applyConstraints({ advanced: [{ torch: false }] }); return { stream, track }; }
-      catch(e) { stream.getTracks().forEach(t=>t.stop()); }
-    } catch(e) {}
-  }
-  return null;
-}
-async function setTorch(track, on) {
-  try { await track.applyConstraints({ advanced: [{ torch: on }] }); } catch(e){}
+// ===== REFERENCE TABLE =====
+const refTable = document.getElementById('refTable');
+for (const [char, code] of Object.entries(MORSE_TABLE)) {
+  if (code.length > 6) continue;
+  const item = document.createElement('div');
+  item.className = 'ref-item';
+  item.innerHTML = `<div class="char">${char}</div><div class="code">${code}</div>`;
+  refTable.appendChild(item);
 }
 
-// ── Calibration sequence definition ──────────────────────────────────────────
-// Pattern: 4 dots, pause, 4 dashes, pause, ".-" x3  (known dot/dash/gap mix)
-// This gives the receiver clear examples of dot durations, dash durations, and char gaps.
-function buildCalibPattern(dot) {
-  const dash = dot * 3, sym = dot, chr = dot * 3;
-  const seq = [];
-  // 4 dots
-  for (let i=0;i<4;i++) { seq.push([true,dot]); if(i<3) seq.push([false,sym]); }
-  seq.push([false, chr]);
-  // 4 dashes
-  for (let i=0;i<4;i++) { seq.push([true,dash]); if(i<3) seq.push([false,sym]); }
-  seq.push([false, chr]);
-  // ".-" repeated 3 times (known letter A)
-  for (let i=0;i<3;i++) {
-    seq.push([true,dot]);  seq.push([false,sym]);
-    seq.push([true,dash]); if(i<2) seq.push([false,chr]);
-  }
-  return seq;
-}
+// ===== TRANSMITTER =====
+const txInput = document.getElementById('txInput');
+const morsePreview = document.getElementById('morsePreview');
+const txSpeedSlider = document.getElementById('txSpeed');
+const txSpeedVal = document.getElementById('txSpeedVal');
+const txBtn = document.getElementById('txBtn');
+const txStatus = document.getElementById('txStatus');
+const flashIndicator = document.getElementById('flashIndicator');
+const currentChar = document.getElementById('currentChar');
+const currentMorse = document.getElementById('currentMorse');
+const screenFlash = document.getElementById('screenFlash');
 
-// ── Transmit helpers ──────────────────────────────────────────────────────────
-let stopRequested = false;
-let txTrack = null, txStream = null;
+let transmitting = false;
+let txAbort = null;
+let torchTrack = null;
+let torchSupported = false;
 
-async function acquireTorch() {
-  const result = await getTorchTrack();
-  if (!result) {
-    document.getElementById('sendStatus').textContent = '⚠️ Torch not available.';
-    resetSendUI(); releaseWakeLock(); return null;
-  }
-  txStream = result.stream; txTrack = result.track;
-  return result.track;
-}
+txInput.addEventListener('input', () => {
+  morsePreview.textContent = textToMorse(txInput.value);
+});
 
-async function runFlashSequence(track, seq, statusEl) {
-  for (const [on, dur] of seq) {
-    if (stopRequested) break;
-    await setTorch(track, on);
-    if (on) document.getElementById('flashDot').classList.add('on');
-    else    document.getElementById('flashDot').classList.remove('on');
-    await sleep(dur);
-  }
-  await setTorch(track, false);
-  document.getElementById('flashDot').classList.remove('on');
-}
+txSpeedSlider.addEventListener('input', () => {
+  txSpeedVal.textContent = txSpeedSlider.value + ' ms';
+});
 
-async function startCalibTransmit() {
-  document.getElementById('sendStatus').textContent = 'Sending calibration...';
-  document.getElementById('calibBtn').disabled = true;
-  document.getElementById('sendBtn').disabled  = true;
-  document.getElementById('stopBtn').style.display = 'block';
-  stopRequested = false;
-  await requestWakeLock();
-
-  const track = await acquireTorch();
-  if (!track) { document.getElementById('calibBtn').disabled = false; document.getElementById('sendBtn').disabled = false; return; }
-
-  const dot = speedDots[+document.getElementById('speedSlider').value-1];
-  // Send calibration pattern twice so receiver has plenty of data
-  for (let r=0; r<2 && !stopRequested; r++) {
-    document.getElementById('sendStatus').textContent = `Calibration pass ${r+1}/2...`;
-    await runFlashSequence(track, buildCalibPattern(dot), null);
-    await sleep(dot * 7);
-  }
-
-  txStream.getTracks().forEach(t=>t.stop()); txStream=null; txTrack=null;
-  releaseWakeLock();
-  document.getElementById('sendStatus').textContent = stopRequested ? 'Stopped.' : '✅ Calibration sent!';
-  resetSendUI();
-}
-
-async function startTransmit() {
-  const txt = document.getElementById('msgInput').value.trim();
-  if (!txt) { alert('Please enter a message.'); return; }
-  const morse = textToMorse(txt);
-
-  document.getElementById('sendBtn').disabled  = true;
-  document.getElementById('calibBtn').disabled = true;
-  document.getElementById('stopBtn').style.display = 'block';
-  document.getElementById('sendStatus').textContent = 'Requesting torch...';
-  stopRequested = false;
-  await requestWakeLock();
-
-  const track = await acquireTorch();
-  if (!track) return;
-
-  const dot  = speedDots[+document.getElementById('speedSlider').value-1];
-  const dash = dot*3, symGap = dot, charGap = dot*3, wordGap = dot*7;
-  const flash = async(dur) => {
-    await setTorch(track,true);  document.getElementById('flashDot').classList.add('on');
-    await sleep(dur);
-    await setTorch(track,false); document.getElementById('flashDot').classList.remove('on');
-  };
-
-  const tokens = morse.split(' ');
-  for (let t=0; t<tokens.length && !stopRequested; t++) {
-    const token = tokens[t];
-    if (token==='/') { await sleep(wordGap-charGap); continue; }
-    document.getElementById('sendStatus').textContent = `Sending: ${token}`;
-    for (let s=0; s<token.length && !stopRequested; s++) {
-      await flash(token[s]==='.'?dot:dash);
-      if (s<token.length-1) await sleep(symGap);
+async function initTorch() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }
+    });
+    torchTrack = stream.getVideoTracks()[0];
+    const caps = torchTrack.getCapabilities();
+    if (caps.torch) {
+      torchSupported = true;
+    } else {
+      torchTrack.stop();
+      torchTrack = null;
     }
-    if (t<tokens.length-1 && tokens[t+1]!=='/') await sleep(charGap);
+  } catch (e) {
+    torchTrack = null;
   }
-
-  txStream.getTracks().forEach(t=>t.stop()); txStream=null; txTrack=null;
-  releaseWakeLock();
-  document.getElementById('sendStatus').textContent = stopRequested ? 'Stopped.' : '✅ Done!';
-  resetSendUI();
 }
 
-function stopTransmit() { stopRequested = true; }
-function resetSendUI() {
-  document.getElementById('sendBtn').disabled  = false;
-  document.getElementById('calibBtn').disabled = false;
-  document.getElementById('stopBtn').style.display = 'none';
-}
-
-// ── Receive & Calibration ─────────────────────────────────────────────────────
-const video  = document.getElementById('camVideo');
-const canvas = document.getElementById('camCanvas');
-const ctx    = canvas.getContext('2d');
-
-let rxActive=false, rxStream=null, rxInterval=null;
-let rxMorseBuffer='', rxTextBuffer='';
-let lightOn=false, lightOnTime=0, lightOffTime=0;
-let baselineLow=999, baselineHigh=0;
-let brightCalibFrames=0, brightCalibDone=false;
-
-// Timing calibration state
-let calibMode=false;          // true when running calibration listen
-let calibPulses=[];           // recorded ON durations
-let calibGaps=[];             // recorded OFF durations (between symbols)
-let calibLastOff=0;
-let calibLightOn=false;
-let calibLightOnTime=0;
-
-// Learned thresholds (ms)
-let dotUnit    = 130;         // estimated dot duration
-let dotDashMid = 0;           // midpoint between dot and dash durations — 0 = not calibrated
-let symGapMid  = 0;           // midpoint between sym-gap and char-gap
-let calibrated = false;
-
-let charTimer=null, wordTimer=null;
-
-function getBrightness() {
-  ctx.drawImage(video, 0, 0, 64, 64);
-  const d = ctx.getImageData(16,16,32,32).data;
-  let s=0;
-  for (let i=0;i<d.length;i+=4) s += d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
-  return s/(d.length/4);
-}
-
-function getLightThreshold() {
-  return baselineLow + Math.max((baselineHigh-baselineLow)*0.45, 12);
-}
-
-// ── Calibration receive mode ──────────────────────────────────────────────────
-function toggleCalib() {
-  if (!rxActive) {
-    // Start camera first, then go into calib mode
-    startCamera(true);
-  } else if (calibMode) {
-    finishCalib();
-    stopCamera();
+async function setTorch(on) {
+  if (torchSupported && torchTrack) {
+    try {
+      await torchTrack.applyConstraints({ advanced: [{ torch: on }] });
+    } catch (e) {}
+  }
+  // Visual indicators always update
+  if (on) {
+    flashIndicator.classList.add('on');
+    if (!torchSupported) screenFlash.classList.add('on');
   } else {
-    // camera already running for receive — restart in calib mode
-    stopCamera();
-    startCamera(true);
+    flashIndicator.classList.remove('on');
+    screenFlash.classList.remove('on');
   }
 }
 
-async function startCamera(forCalib) {
+function sleep(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        clearTimeout(timer);
+        reject(new DOMException('Aborted', 'AbortError'));
+      });
+    }
+  });
+}
+
+async function transmitMorse(text, unitMs, signal) {
+  const morse = textToMorse(text);
+  const chars = text.toUpperCase().split('');
+  const morseParts = chars.map(ch => {
+    if (ch === ' ') return { char: ' ', morse: '/' };
+    return { char: ch, morse: MORSE_TABLE[ch] || '' };
+  }).filter(p => p.morse);
+
+  // Lead-in: short pause
+  txStatus.textContent = 'Starting in 1 second...';
+  await sleep(1000, signal);
+
+  for (let ci = 0; ci < morseParts.length; ci++) {
+    const { char, morse } = morseParts[ci];
+    currentChar.textContent = char === ' ' ? '[space]' : char;
+    currentMorse.textContent = morse;
+    txStatus.textContent = `Sending character ${ci + 1} of ${morseParts.length}`;
+
+    if (morse === '/') {
+      // Word gap: 7 units total (3 already from inter-char, so 4 more)
+      await sleep(unitMs * 4, signal);
+      continue;
+    }
+
+    for (let si = 0; si < morse.length; si++) {
+      const symbol = morse[si];
+      const duration = symbol === '.' ? unitMs : unitMs * 3;
+
+      await setTorch(true);
+      await sleep(duration, signal);
+      await setTorch(false);
+
+      // Inter-element gap (1 unit) — but not after last element
+      if (si < morse.length - 1) {
+        await sleep(unitMs, signal);
+      }
+    }
+
+    // Inter-character gap (3 units) — but not after last character
+    if (ci < morseParts.length - 1 && morseParts[ci + 1].morse !== '/') {
+      await sleep(unitMs * 3, signal);
+    }
+  }
+
+  // End signal: extra long pause
+  await sleep(unitMs * 7, signal);
+}
+
+async function toggleTransmit() {
+  if (transmitting) {
+    txAbort.abort();
+    return;
+  }
+
+  const text = txInput.value.trim();
+  if (!text) {
+    txStatus.textContent = 'Enter a message first!';
+    return;
+  }
+
+  transmitting = true;
+  txAbort = new AbortController();
+  txBtn.textContent = 'Stop';
+  txBtn.className = 'tx-btn stop';
+  txInput.disabled = true;
+
+  await initTorch();
+
+  if (!torchSupported) {
+    txStatus.textContent = 'No torch found — using screen flash';
+  }
+
+  try {
+    await transmitMorse(text, parseInt(txSpeedSlider.value), txAbort.signal);
+    txStatus.textContent = 'Transmission complete!';
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      txStatus.textContent = 'Transmission stopped.';
+    } else {
+      txStatus.textContent = 'Error: ' + e.message;
+    }
+  }
+
+  await setTorch(false);
+  transmitting = false;
+  txBtn.textContent = 'Start Transmitting';
+  txBtn.className = 'tx-btn start';
+  txInput.disabled = false;
+  currentChar.textContent = '';
+  currentMorse.textContent = '';
+}
+
+// ===== RECEIVER =====
+const rxVideo = document.getElementById('rxVideo');
+const rxCanvas = document.getElementById('rxCanvas');
+const rxCtx = rxCanvas.getContext('2d', { willReadFrequently: true });
+const brightnessFill = document.getElementById('brightnessFill');
+const thresholdLine = document.getElementById('thresholdLine');
+const brightnessVal = document.getElementById('brightnessVal');
+const rxSensitivity = document.getElementById('rxSensitivity');
+const rxSensVal = document.getElementById('rxSensVal');
+const rxSpeedSlider = document.getElementById('rxSpeed');
+const rxSpeedValEl = document.getElementById('rxSpeedVal');
+const rxBtn = document.getElementById('rxBtn');
+const rxStatus = document.getElementById('rxStatus');
+const decodedMorse = document.getElementById('decodedMorse');
+const decodedText = document.getElementById('decodedText');
+
+let receiving = false;
+let rxStream = null;
+let rxAnimFrame = null;
+
+// Receiver state
+let rxState = {
+  isOn: false,
+  lastChange: 0,
+  symbols: '',        // current character's dots/dashes
+  morseChars: [],     // completed morse characters
+  currentWord: [],    // characters in current word
+  words: [],          // completed words
+  brightnessHistory: [],
+  minBrightness: 255,
+  maxBrightness: 0,
+  adaptiveMin: 50,
+  adaptiveMax: 200,
+  lastBrightness: 0,
+  debounceCount: 0,
+};
+
+function resetRxState() {
+  rxState = {
+    isOn: false,
+    lastChange: 0,
+    symbols: '',
+    morseChars: [],
+    currentWord: [],
+    words: [],
+    brightnessHistory: [],
+    minBrightness: 255,
+    maxBrightness: 0,
+    adaptiveMin: 50,
+    adaptiveMax: 200,
+    lastBrightness: 0,
+    debounceCount: 0,
+  };
+}
+
+rxSensitivity.addEventListener('input', () => {
+  rxSensVal.textContent = rxSensitivity.value;
+});
+rxSpeedSlider.addEventListener('input', () => {
+  rxSpeedValEl.textContent = rxSpeedSlider.value + ' ms';
+});
+
+async function startCamera() {
   try {
     rxStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width:{ideal:64}, height:{ideal:64} },
-      audio: false
+      video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
     });
-    video.srcObject = rxStream;
-    await video.play().catch(()=>{});
-    canvas.width=64; canvas.height=64;
-    rxActive=true;
-    brightCalibFrames=0; brightCalibDone=false;
-    baselineLow=999; baselineHigh=0;
-
-    if (forCalib) {
-      calibMode=true; calibPulses=[]; calibGaps=[];
-      calibLightOn=false; calibLastOff=0;
-      document.getElementById('runCalibBtn').textContent = '⏹ Stop Calibration';
-      document.getElementById('rxStatus').textContent = 'Brightness calibrating... aim at light';
-      document.getElementById('cr-status').className = 'calib-warn';
-      document.getElementById('cr-status').textContent = '⏳ Listening for calibration signal...';
-    } else {
-      calibMode=false;
-      document.getElementById('rxBtn').textContent = '⛔ Stop Receiving';
-      document.getElementById('rxBtn').classList.add('recording');
-      document.getElementById('rxStatus').textContent = 'Calibrating brightness...';
-    }
-
-    rxMorseBuffer=''; 
-    lightOn=false; lightOffTime=0;
-    rxInterval = setInterval(processFrame, 50);
-  } catch(e) {
-    alert('Camera access denied. Please allow camera permission.');
+    rxVideo.srcObject = rxStream;
+    await rxVideo.play();
+    rxCanvas.width = 640;
+    rxCanvas.height = 480;
+    return true;
+  } catch (e) {
+    rxStatus.textContent = 'Camera error: ' + e.message;
+    return false;
   }
 }
 
 function stopCamera() {
-  clearInterval(rxInterval);
-  clearTimeout(charTimer); clearTimeout(wordTimer);
-  if (rxStream) rxStream.getTracks().forEach(t=>t.stop());
-  rxStream=null; rxActive=false; calibMode=false;
-  document.getElementById('rxBtn').textContent = '📷 Start Receiving';
-  document.getElementById('rxBtn').classList.remove('recording');
-  document.getElementById('runCalibBtn').textContent = '📶 Run Calibration';
-  document.getElementById('rxStatus').textContent = 'Stopped.';
-  document.getElementById('rxDot').style.background='#333';
-  document.getElementById('rxDot').style.boxShadow='none';
-  document.getElementById('lightMeter').style.width='0%';
+  if (rxStream) {
+    rxStream.getTracks().forEach(t => t.stop());
+    rxStream = null;
+  }
+  rxVideo.srcObject = null;
 }
 
-function finishCalib() {
-  // Analyse captured pulses to find dot unit and dash threshold
-  if (calibPulses.length < 4) {
-    document.getElementById('cr-status').className='calib-warn';
-    document.getElementById('cr-status').textContent='⚠ Not enough data. Try again closer/darker.';
-    return;
+function sampleBrightness() {
+  rxCtx.drawImage(rxVideo, 0, 0, rxCanvas.width, rxCanvas.height);
+
+  // Sample center region (ROI circle area)
+  const cx = Math.floor(rxCanvas.width / 2);
+  const cy = Math.floor(rxCanvas.height / 2);
+  const radius = 30;
+
+  const imageData = rxCtx.getImageData(
+    cx - radius, cy - radius, radius * 2, radius * 2
+  );
+  const data = imageData.data;
+
+  let totalBrightness = 0;
+  let count = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    // Luminance: 0.299R + 0.587G + 0.114B
+    const lum = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    totalBrightness += lum;
+    count++;
   }
 
-  // Sort pulses — short ones are dots, long ones are dashes
-  const sorted = [...calibPulses].sort((a,b)=>a-b);
-  const mid    = Math.floor(sorted.length/2);
-
-  // Find natural gap in durations (k-means style: 2 clusters)
-  let bestSplit=0, bestScore=-Infinity;
-  for (let i=1;i<sorted.length;i++) {
-    const gap = sorted[i]-sorted[i-1];
-    if (gap > bestScore) { bestScore=gap; bestSplit=i; }
-  }
-  const dots  = sorted.slice(0, bestSplit);
-  const dashes= sorted.slice(bestSplit);
-
-  if (dots.length===0 || dashes.length===0) {
-    document.getElementById('cr-status').className='calib-warn';
-    document.getElementById('cr-status').textContent='⚠ Could not distinguish dots from dashes. Try again.';
-    return;
-  }
-
-  const avgDot  = dots.reduce((a,b)=>a+b,0)  / dots.length;
-  const avgDash = dashes.reduce((a,b)=>a+b,0) / dashes.length;
-  dotDashMid    = (avgDot + avgDash) / 2;
-  dotUnit       = Math.round(avgDot);
-
-  // Analyse gaps to find sym-gap vs char-gap threshold
-  let symGapMidCalc = dotUnit * 2; // fallback
-  if (calibGaps.length >= 4) {
-    const sortedGaps = [...calibGaps].sort((a,b)=>a-b);
-    let bestGapSplit=0, bestGapScore=-Infinity;
-    for (let i=1;i<sortedGaps.length;i++) {
-      const g = sortedGaps[i]-sortedGaps[i-1];
-      if (g > bestGapScore) { bestGapScore=g; bestGapSplit=i; }
-    }
-    const symGaps  = sortedGaps.slice(0, bestGapSplit);
-    const charGaps = sortedGaps.slice(bestGapSplit);
-    if (symGaps.length>0 && charGaps.length>0) {
-      const avgSym  = symGaps.reduce((a,b)=>a+b,0)/symGaps.length;
-      const avgChar = charGaps.reduce((a,b)=>a+b,0)/charGaps.length;
-      symGapMid = (avgSym+avgChar)/2;
-      symGapMidCalc = symGapMid;
-    }
-  }
-  symGapMid = symGapMidCalc;
-  calibrated = true;
-
-  document.getElementById('cr-dot').textContent  = `${Math.round(avgDot)}ms (avg dot)`;
-  document.getElementById('cr-dash').textContent = `>${Math.round(dotDashMid)}ms = dash`;
-  document.getElementById('cr-gap').textContent  = `>${Math.round(symGapMid)}ms = letter gap`;
-  document.getElementById('cr-status').className = 'calib-ok';
-  document.getElementById('cr-status').textContent = '✅ Calibrated! Ready to receive.';
+  return count > 0 ? totalBrightness / count : 0;
 }
 
-// ── Toggle receive ────────────────────────────────────────────────────────────
-async function toggleReceive() {
-  if (!rxActive) {
-    await startCamera(false);
-  } else if (!calibMode) {
-    stopCamera();
-  } else {
-    finishCalib();
-    stopCamera();
-    await startCamera(false);
-  }
-}
-
-// ── Frame processing ──────────────────────────────────────────────────────────
 function processFrame() {
-  let b;
-  try { b=getBrightness(); } catch(e){ return; }
-  const now = Date.now();
+  if (!receiving) return;
 
-  // Brightness baseline calibration (first 30 frames)
-  if (!brightCalibDone) {
-    if (b<baselineLow)  baselineLow=b;
-    if (b>baselineHigh) baselineHigh=b;
-    brightCalibFrames++;
-    if (brightCalibFrames>=30) {
-      brightCalibDone=true;
-      document.getElementById('rxStatus').textContent = calibMode ? 'Listening for calibration signal...' : 'Listening...';
+  const brightness = sampleBrightness();
+  const now = performance.now();
+
+  // Update adaptive min/max with decay
+  rxState.adaptiveMin = rxState.adaptiveMin * 0.995 + brightness * 0.005;
+  rxState.adaptiveMax = rxState.adaptiveMax * 0.995 + brightness * 0.005;
+  if (brightness < rxState.adaptiveMin) rxState.adaptiveMin = brightness;
+  if (brightness > rxState.adaptiveMax) rxState.adaptiveMax = brightness;
+
+  // Smoothed brightness (simple moving average)
+  rxState.brightnessHistory.push(brightness);
+  if (rxState.brightnessHistory.length > 5) rxState.brightnessHistory.shift();
+  const smoothed = rxState.brightnessHistory.reduce((a, b) => a + b) / rxState.brightnessHistory.length;
+
+  // Calculate threshold
+  const range = rxState.adaptiveMax - rxState.adaptiveMin;
+  const sensitivity = parseInt(rxSensitivity.value);
+  const threshold = rxState.adaptiveMin + range * (sensitivity / 100);
+
+  // Update UI
+  const barPct = Math.min(100, Math.max(0, ((smoothed - rxState.adaptiveMin) / (range || 1)) * 100));
+  brightnessFill.style.width = barPct + '%';
+  brightnessFill.className = 'brightness-bar-fill ' + (smoothed > threshold ? 'bright' : 'dim');
+  thresholdLine.style.left = (sensitivity) + '%';
+  brightnessVal.textContent = Math.round(smoothed);
+
+  const isOn = smoothed > threshold;
+
+  // State transition with debounce
+  if (isOn !== rxState.isOn) {
+    rxState.debounceCount++;
+    if (rxState.debounceCount >= 3) {
+      const duration = now - rxState.lastChange;
+      const unitMs = parseInt(rxSpeedSlider.value);
+
+      if (rxState.lastChange > 0 && duration > 20) {
+        if (rxState.isOn) {
+          // Was ON, now OFF — classify the ON duration
+          if (duration < unitMs * 2) {
+            rxState.symbols += '.';
+          } else {
+            rxState.symbols += '-';
+          }
+          updateDecodedMorse();
+        } else {
+          // Was OFF, now ON — classify the OFF duration
+          if (duration > unitMs * 5) {
+            // Word gap
+            finishCharacter();
+            finishWord();
+          } else if (duration > unitMs * 1.8) {
+            // Character gap
+            finishCharacter();
+          }
+          // else: inter-element gap, do nothing
+        }
+      }
+
+      rxState.isOn = isOn;
+      rxState.lastChange = now;
+      rxState.debounceCount = 0;
     }
+  } else {
+    rxState.debounceCount = 0;
+  }
+
+  // Check for extended silence to finalize pending symbols
+  if (!rxState.isOn && rxState.symbols.length > 0) {
+    const silenceDuration = now - rxState.lastChange;
+    const unitMs = parseInt(rxSpeedSlider.value);
+
+    if (silenceDuration > unitMs * 5) {
+      finishCharacter();
+      finishWord();
+    } else if (silenceDuration > unitMs * 2.5) {
+      finishCharacter();
+    }
+  }
+
+  rxState.lastBrightness = smoothed;
+  rxAnimFrame = requestAnimationFrame(processFrame);
+}
+
+function finishCharacter() {
+  if (rxState.symbols.length === 0) return;
+  const decoded = REVERSE_MORSE[rxState.symbols] || '?';
+  rxState.currentWord.push(decoded);
+  rxState.morseChars.push(rxState.symbols);
+  rxState.symbols = '';
+  updateDecodedDisplay();
+}
+
+function finishWord() {
+  if (rxState.currentWord.length === 0) return;
+  rxState.words.push(rxState.currentWord.join(''));
+  rxState.currentWord = [];
+  updateDecodedDisplay();
+}
+
+function updateDecodedMorse() {
+  const past = rxState.morseChars.join(' ');
+  const current = rxState.symbols;
+  decodedMorse.textContent = past + (past && current ? ' ' : '') + current;
+}
+
+function updateDecodedDisplay() {
+  const allMorse = rxState.morseChars.join(' ');
+  decodedMorse.textContent = allMorse + (rxState.symbols ? ' ' + rxState.symbols : '');
+
+  const completedWords = rxState.words.join(' ');
+  const currentWord = rxState.currentWord.join('');
+  decodedText.textContent = completedWords + (completedWords && currentWord ? ' ' : '') + currentWord;
+}
+
+async function toggleReceive() {
+  if (receiving) {
+    receiving = false;
+    if (rxAnimFrame) cancelAnimationFrame(rxAnimFrame);
+    stopCamera();
+    rxBtn.textContent = 'Start Listening';
+    rxBtn.className = 'rx-btn start';
+    rxStatus.textContent = 'Camera inactive';
     return;
   }
 
-  const threshold = getLightThreshold();
-  if (b<threshold) baselineLow = baselineLow*0.97 + b*0.03;
-  const isOn = b > threshold;
+  rxStatus.textContent = 'Starting camera...';
+  const ok = await startCamera();
+  if (!ok) return;
 
-  // Light meter
-  document.getElementById('lightMeter').style.width =
-    Math.min(100, Math.max(0, ((b-baselineLow)/Math.max(baselineHigh-baselineLow,20))*100))+'%';
+  receiving = true;
+  resetRxState();
+  rxBtn.textContent = 'Stop Listening';
+  rxBtn.className = 'rx-btn stop';
+  rxStatus.textContent = 'Listening for Morse code...';
 
-  // Flash indicator
-  const dot = document.getElementById('rxDot');
-  dot.style.background  = isOn ? '#ffe066' : '#333';
-  dot.style.boxShadow   = isOn ? '0 0 10px #ffe066' : 'none';
+  // Let camera stabilize
+  await new Promise(r => setTimeout(r, 500));
 
-  if (calibMode) {
-    processCalibrateFrame(isOn, now);
-  } else {
-    processDecodeFrame(isOn, now);
-  }
+  // Initialize adaptive range from initial brightness
+  const initialBrightness = sampleBrightness();
+  rxState.adaptiveMin = initialBrightness;
+  rxState.adaptiveMax = initialBrightness + 1;
+  rxState.lastChange = performance.now();
+
+  rxAnimFrame = requestAnimationFrame(processFrame);
 }
 
-function processCalibrateFrame(isOn, now) {
-  if (isOn && !calibLightOn) {
-    calibLightOn=true;
-    const offDur = calibLastOff>0 ? now-calibLastOff : 0;
-    if (offDur>20 && offDur<5000) calibGaps.push(offDur);
-    calibLightOnTime=now;
-    document.getElementById('rxStatus').textContent = '🔦 Flash detected, collecting...';
-  } else if (!isOn && calibLightOn) {
-    calibLightOn=false;
-    const onDur = now-calibLightOnTime;
-    calibLastOff=now;
-    if (onDur>15 && onDur<3000) {
-      calibPulses.push(onDur);
-      document.getElementById('rxStatus').textContent = `Pulses captured: ${calibPulses.length}`;
-    }
-  }
-  // Auto-finish after 60 pulses
-  if (calibPulses.length>=60) {
-    finishCalib();
-    stopCamera();
-  }
-}
-
-function processDecodeFrame(isOn, now) {
-  document.getElementById('rxStatus').textContent = isOn ? '🔦 Flash!' : 'Listening...';
-
-  // Use calibrated thresholds or fallback to dotUnit-based estimates
-  const ddMid   = dotDashMid>0 ? dotDashMid  : dotUnit*2;
-  const sgMid   = symGapMid>0  ? symGapMid   : dotUnit*2;
-  const wordThr = sgMid * 2.5;
-
-  if (isOn && !lightOn) {
-    lightOn=true;
-    clearTimeout(charTimer); clearTimeout(wordTimer);
-    const offDur = lightOffTime>0 ? now-lightOffTime : 0;
-    if (offDur>wordThr)       { flushChar(); flushWord(); }
-    else if (offDur>sgMid)    { flushChar(); }
-    lightOnTime=now;
-  } else if (!isOn && lightOn) {
-    lightOn=false;
-    const onDur = now-lightOnTime;
-    lightOffTime=now;
-
-    if (onDur < 15) return; // noise filter
-
-    const sym = onDur > ddMid ? '-' : '.';
-    rxMorseBuffer += sym;
-
-    // If not calibrated, auto-learn dot unit
-    if (!calibrated && sym==='.' && onDur>20) {
-      dotUnit = Math.round(dotUnit*0.8 + onDur*1.2*0.2);
-    }
-
-    document.getElementById('receive-morse').textContent =
-      (rxTextBuffer ? '['+rxTextBuffer.trim()+'] ' : '') + rxMorseBuffer || '—';
-
-    charTimer = setTimeout(()=>flushChar(), sgMid*1.2);
-    wordTimer = setTimeout(()=>flushWord(), wordThr);
-  }
-}
-
-function flushChar() {
-  if (!rxMorseBuffer) return;
-  rxTextBuffer += MORSE_REV[rxMorseBuffer] || '?';
-  document.getElementById('receive-output').textContent = rxTextBuffer.trim()||'—';
-  rxMorseBuffer='';
-  document.getElementById('receive-morse').textContent='—';
-}
-function flushWord() {
-  flushChar();
-  rxTextBuffer+=' ';
-  document.getElementById('receive-output').textContent = rxTextBuffer.trim()||'—';
-}
-function clearReceived() {
-  clearTimeout(charTimer); clearTimeout(wordTimer);
-  rxMorseBuffer=''; rxTextBuffer='';
-  document.getElementById('receive-morse').textContent='—';
-  document.getElementById('receive-output').textContent='—';
-  if (!calibrated) { dotUnit=130; dotDashMid=0; symGapMid=0; }
-  brightCalibDone=false; brightCalibFrames=0;
-  baselineLow=999; baselineHigh=0;
-  if (rxActive) document.getElementById('rxStatus').textContent='Recalibrating brightness...';
-}
-
-function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t,i)=>
-    t.classList.toggle('active',['send','receive','ref'][i]===tab));
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-'+tab).classList.add('active');
+function clearDecoded() {
+  resetRxState();
+  decodedMorse.textContent = '';
+  decodedText.textContent = '';
 }
 </script>
 </body>
