@@ -16,19 +16,13 @@
     display: flex;
     flex-direction: column;
   }
-  header {
-    text-align: center;
-    padding: 24px 16px 12px;
-  }
+  header { text-align: center; padding: 24px 16px 12px; }
   header h1 { font-size: 1.6rem; letter-spacing: 2px; color: #fff; }
   header p { font-size: 0.8rem; color: #888; margin-top: 4px; }
 
   .tabs {
-    display: flex;
-    margin: 0 16px;
-    border-radius: 12px;
-    overflow: hidden;
-    background: #1a1a2e;
+    display: flex; margin: 0 16px;
+    border-radius: 12px; overflow: hidden; background: #1a1a2e;
   }
   .tab {
     flex: 1; padding: 12px; text-align: center;
@@ -44,21 +38,17 @@
   textarea {
     width: 100%; padding: 14px; border-radius: 12px;
     background: #1a1a2e; border: 1px solid #2a2a4a;
-    color: #fff; font-size: 1rem; resize: none; height: 100px;
-    outline: none;
+    color: #fff; font-size: 1rem; resize: none; height: 100px; outline: none;
   }
   textarea:focus { border-color: #4f8ef7; }
 
   .morse-display {
     background: #1a1a2e; border-radius: 12px; padding: 14px;
     font-family: monospace; font-size: 1.1rem; letter-spacing: 3px;
-    color: #4f8ef7; min-height: 50px; word-break: break-all;
-    line-height: 1.8;
+    color: #4f8ef7; min-height: 50px; word-break: break-all; line-height: 1.8;
   }
 
-  .speed-row {
-    display: flex; align-items: center; gap: 12px;
-  }
+  .speed-row { display: flex; align-items: center; gap: 12px; }
   .speed-row label { font-size: 0.85rem; color: #888; white-space: nowrap; }
   input[type=range] { flex: 1; accent-color: #4f8ef7; }
 
@@ -76,8 +66,7 @@
 
   .status-dot {
     width: 12px; height: 12px; border-radius: 50%;
-    background: #333; display: inline-block; margin-right: 8px;
-    transition: background 0.1s;
+    background: #333; display: inline-block; margin-right: 8px; transition: background 0.1s;
   }
   .status-dot.on { background: #ffe066; box-shadow: 0 0 10px #ffe066; }
 
@@ -98,21 +87,17 @@
   }
 
   .hint { font-size: 0.78rem; color: #555; text-align: center; line-height: 1.5; }
-
   canvas#camCanvas { display: none; }
 
-  .light-meter {
-    height: 8px; border-radius: 4px;
-    background: #1a1a2e; overflow: hidden; margin-top: 4px;
-  }
-  .light-meter-fill {
-    height: 100%; width: 0%; background: #2ecc71;
-    transition: width 0.05s; border-radius: 4px;
-  }
+  .light-meter { height: 8px; border-radius: 4px; background: #1a1a2e; overflow: hidden; margin-top: 4px; }
+  .light-meter-fill { height: 100%; width: 0%; background: #2ecc71; transition: width 0.05s; border-radius: 4px; }
 
-  .section-label {
-    font-size: 0.75rem; color: #555; text-transform: uppercase;
-    letter-spacing: 1px; margin-bottom: -8px;
+  .section-label { font-size: 0.75rem; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -8px; }
+
+  .device-badge {
+    text-align: center; font-size: 0.75rem; padding: 4px 10px;
+    background: #1a1a2e; border-radius: 20px; color: #555; margin: 0 auto;
+    width: fit-content;
   }
 </style>
 </head>
@@ -121,7 +106,9 @@
   <h1>⚡ MORSE LIGHT</h1>
   <p>Flashlight Morse Code Communicator</p>
 </header>
+<div class="device-badge" id="deviceBadge">Detecting device...</div>
 
+<br>
 <div class="tabs">
   <button class="tab active" onclick="switchTab('send')">📡 Transmit</button>
   <button class="tab" onclick="switchTab('receive')">📷 Receive</button>
@@ -149,7 +136,7 @@
   <button class="main-btn btn-send" id="sendBtn" onclick="startTransmit()">⚡ Transmit</button>
   <button class="main-btn btn-stop" id="stopBtn" onclick="stopTransmit()" style="display:none">⛔ Stop</button>
 
-  <p class="hint">Make sure your phone brightness is at max and point the camera away from the receiving phone. Keep devices ~1–3 feet apart in a dim environment.</p>
+  <p class="hint">Keep screen brightness at max. Point the camera end of your phone toward the receiving device. Works best in a dim room, ~1–3 feet apart.</p>
 </div>
 
 <!-- RECEIVE PANEL -->
@@ -171,9 +158,9 @@
   <button class="main-btn btn-stop" onclick="clearReceived()" style="margin-top:0">🗑 Clear</button>
 
   <canvas id="camCanvas"></canvas>
-  <video id="camVideo" autoplay playsinline style="display:none"></video>
+  <video id="camVideo" autoplay playsinline muted style="display:none"></video>
 
-  <p class="hint">Point this phone's camera directly at the other phone's flashlight. Works best in a dark room. Tap "Start Receiving" and wait for the other device to transmit.</p>
+  <p class="hint">Point this phone's camera at the other phone's flashlight. Tap Start, wait for "Listening...", then have the other device transmit.</p>
 </div>
 
 <!-- REFERENCE PANEL -->
@@ -183,6 +170,7 @@
 </div>
 
 <script>
+// ── Morse tables ──────────────────────────────────────────────
 const MORSE = {
   'A':'.-','B':'-...','C':'-.-.','D':'-..','E':'.','F':'..-.','G':'--.','H':'....','I':'..','J':'.---',
   'K':'-.-','L':'.-..','M':'--','N':'-.','O':'---','P':'.--.','Q':'--.-','R':'.-.','S':'...','T':'-',
@@ -192,7 +180,13 @@ const MORSE = {
 };
 const MORSE_REV = Object.fromEntries(Object.entries(MORSE).map(([k,v])=>[v,k]));
 
-// Build reference
+// ── Device detection ─────────────────────────────────────────
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+const isAndroid = /Android/.test(navigator.userAgent);
+document.getElementById('deviceBadge').textContent =
+  isIOS ? '🍎 iOS Device' : isAndroid ? '🤖 Android Device' : '💻 Desktop Browser';
+
+// ── Reference grid ────────────────────────────────────────────
 const refGrid = document.getElementById('refGrid');
 Object.entries(MORSE).forEach(([ch, code]) => {
   const el = document.createElement('div');
@@ -201,41 +195,65 @@ Object.entries(MORSE).forEach(([ch, code]) => {
   refGrid.appendChild(el);
 });
 
+// ── Helpers ───────────────────────────────────────────────────
 function textToMorse(txt) {
   return txt.toUpperCase().split('').map(c => {
     if (c === ' ') return '/';
     return MORSE[c] || '';
   }).filter(x => x !== '').join(' ');
 }
-
 function updateMorse() {
-  const txt = document.getElementById('msgInput').value;
-  document.getElementById('morsePreview').textContent = textToMorse(txt) || '—';
+  document.getElementById('morsePreview').textContent = textToMorse(document.getElementById('msgInput').value) || '—';
 }
-
 const speedLabels = ['Very Slow','Slow','Medium','Fast','Very Fast'];
-const speedDots = [300, 200, 130, 80, 50]; // ms per dot unit
-
+const speedDots   = [300, 200, 130, 80, 50];
 function updateSpeedLabel() {
-  const v = parseInt(document.getElementById('speedSlider').value) - 1;
-  document.getElementById('speedLabel').textContent = speedLabels[v];
+  document.getElementById('speedLabel').textContent = speedLabels[+document.getElementById('speedSlider').value - 1];
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Wake Lock (keeps screen on during transmit on Android/iOS) ─
+let wakeLock = null;
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e) {}
+  }
+}
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
 }
 
-// Transmit
-let torchStream = null;
-let transmitting = false;
-let stopRequested = false;
-
-async function getTorch() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', advanced: [{ torch: true }] }
-    });
-    const track = stream.getVideoTracks()[0];
-    return { stream, track };
-  } catch(e) {
-    return null;
+// ── Torch helpers ─────────────────────────────────────────────
+async function getTorchTrack() {
+  // Try rear camera with torch
+  const constraints = [
+    // Android Chrome style
+    { video: { facingMode: { exact: 'environment' } } },
+    // iOS / fallback
+    { video: { facingMode: 'environment' } },
+    // last resort
+    { video: true }
+  ];
+  for (const c of constraints) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(c);
+      const track = stream.getVideoTracks()[0];
+      const caps = track.getCapabilities ? track.getCapabilities() : {};
+      // Check torch support
+      if (caps.torch) {
+        return { stream, track, torchSupported: true };
+      }
+      // Some Android devices expose torch only after apply
+      try {
+        await track.applyConstraints({ advanced: [{ torch: false }] });
+        return { stream, track, torchSupported: true };
+      } catch(e) {
+        // torch not supported on this track, try next
+        stream.getTracks().forEach(t => t.stop());
+      }
+    } catch(e) { /* try next */ }
   }
+  return null;
 }
 
 async function setTorch(track, on) {
@@ -244,152 +262,126 @@ async function setTorch(track, on) {
   } catch(e) {}
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+// ── Transmit ──────────────────────────────────────────────────
+let stopRequested = false;
 
 async function startTransmit() {
   const txt = document.getElementById('msgInput').value.trim();
-  if (!txt) { alert('Please enter a message.'); return; }
-
+  if (!txt) { alert('Please enter a message first.'); return; }
   const morse = textToMorse(txt);
   if (!morse) return;
 
   document.getElementById('sendBtn').style.display = 'none';
   document.getElementById('stopBtn').style.display = 'block';
-  document.getElementById('sendStatus').textContent = 'Acquiring torch...';
-
-  const result = await getTorch();
-  if (!result) {
-    document.getElementById('sendStatus').textContent = 'Torch not available on this device/browser.';
-    resetSendUI();
-    return;
-  }
-  const { stream, track } = result;
-  torchStream = stream;
-  transmitting = true;
+  document.getElementById('sendStatus').textContent = 'Requesting torch...';
   stopRequested = false;
 
-  const speed = speedDots[parseInt(document.getElementById('speedSlider').value) - 1];
-  const dot = speed;
-  const dash = speed * 3;
-  const symGap = speed;
-  const charGap = speed * 3;
-  const wordGap = speed * 7;
+  await requestWakeLock();
 
-  const flashDot = document.getElementById('flashDot');
+  const result = await getTorchTrack();
+  if (!result || !result.torchSupported) {
+    document.getElementById('sendStatus').textContent = '⚠️ Torch not available. Try Chrome on Android or Safari on iOS.';
+    resetSendUI(); releaseWakeLock(); return;
+  }
+  const { stream, track } = result;
+
+  const dot  = speedDots[+document.getElementById('speedSlider').value - 1];
+  const dash = dot * 3, symGap = dot, charGap = dot * 3, wordGap = dot * 7;
+  const flashDot   = document.getElementById('flashDot');
   const sendStatus = document.getElementById('sendStatus');
 
-  // Send a preamble: 3 short flashes so receiver can calibrate
-  sendStatus.textContent = 'Sending calibration...';
-  for (let i = 0; i < 3; i++) {
-    if (stopRequested) break;
-    await setTorch(track, true); flashDot.classList.add('on');
-    await sleep(dot);
+  const flash = async (dur) => {
+    await setTorch(track, true);  flashDot.classList.add('on');
+    await sleep(dur);
     await setTorch(track, false); flashDot.classList.remove('on');
+  };
+
+  // Preamble: 5 dots so receiver can calibrate timing
+  sendStatus.textContent = 'Sending calibration pulses...';
+  for (let i = 0; i < 5 && !stopRequested; i++) {
+    await flash(dot);
     await sleep(dot);
   }
   await sleep(charGap);
 
   const tokens = morse.split(' ');
-  for (let t = 0; t < tokens.length; t++) {
-    if (stopRequested) break;
+  for (let t = 0; t < tokens.length && !stopRequested; t++) {
     const token = tokens[t];
-    if (token === '/') {
-      sendStatus.textContent = `Word gap...`;
-      await sleep(wordGap - charGap); // already have char gap from previous
-      continue;
-    }
+    if (token === '/') { await sleep(wordGap - charGap); continue; }
     sendStatus.textContent = `Sending: ${token}`;
-    for (let s = 0; s < token.length; s++) {
-      if (stopRequested) break;
-      const sym = token[s];
-      await setTorch(track, true); flashDot.classList.add('on');
-      await sleep(sym === '.' ? dot : dash);
-      await setTorch(track, false); flashDot.classList.remove('on');
+    for (let s = 0; s < token.length && !stopRequested; s++) {
+      await flash(token[s] === '.' ? dot : dash);
       if (s < token.length - 1) await sleep(symGap);
     }
-    if (t < tokens.length - 1 && tokens[t+1] !== '/') await sleep(charGap);
-    else if (tokens[t+1] === '/') await sleep(charGap);
+    if (t < tokens.length - 1 && tokens[t + 1] !== '/') await sleep(charGap);
+    else if (tokens[t + 1] === '/') await sleep(charGap);
   }
 
   await setTorch(track, false);
   flashDot.classList.remove('on');
   stream.getTracks().forEach(t => t.stop());
-  torchStream = null;
-  transmitting = false;
-  sendStatus.textContent = stopRequested ? 'Stopped.' : 'Transmission complete!';
+  releaseWakeLock();
+  sendStatus.textContent = stopRequested ? 'Stopped.' : '✅ Transmission complete!';
   resetSendUI();
 }
 
-function stopTransmit() {
-  stopRequested = true;
-}
-
+function stopTransmit() { stopRequested = true; }
 function resetSendUI() {
   document.getElementById('sendBtn').style.display = 'block';
   document.getElementById('stopBtn').style.display = 'none';
 }
 
-// --- RECEIVE ---
-let rxActive = false;
-let rxStream = null;
-let rxInterval = null;
-let rxHistory = [];
-let rxMorseBuffer = '';
-let rxTextBuffer = '';
-let lastBrightness = 0;
-let lightOn = false;
-let lightOnTime = 0;
-let lightOffTime = 0;
-let baselineSet = false;
-let baselineLow = 999;
-let baselineHigh = 0;
-let charTimer = null;
-let wordTimer = null;
-let dotUnit = 100; // will auto-calibrate
-let calibSamples = [];
-let calibrating = true;
-let calibFrames = 0;
+// ── Receive ───────────────────────────────────────────────────
+let rxActive = false, rxStream = null, rxInterval = null;
+let rxMorseBuffer = '', rxTextBuffer = '';
+let lightOn = false, lightOnTime = 0, lightOffTime = 0;
+let baselineLow = 999, baselineHigh = 0;
+let calibrating = true, calibFrames = 0;
+let dotUnit = 130;
+let charTimer = null, wordTimer = null;
 
-const video = document.getElementById('camVideo');
+const video  = document.getElementById('camVideo');
 const canvas = document.getElementById('camCanvas');
-const ctx = canvas.getContext('2d');
+const ctx    = canvas.getContext('2d');
 
 async function toggleReceive() {
-  if (!rxActive) {
-    await startReceive();
-  } else {
-    stopReceive();
-  }
+  rxActive ? stopReceive() : await startReceive();
 }
 
 async function startReceive() {
   try {
-    rxStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: 32, height: 32 }
+    // Request rear camera; muted is important on some Android versions
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 64 }, height: { ideal: 64 } },
+      audio: false
     });
-    video.srcObject = rxStream;
-    canvas.width = 32; canvas.height = 32;
-    rxActive = true;
+    video.srcObject = stream;
+    await video.play().catch(()=>{});
+    canvas.width = 64; canvas.height = 64;
+    rxStream  = stream;
+    rxActive  = true;
+    calibrating  = true;
+    calibFrames  = 0;
+    baselineLow  = 999; baselineHigh = 0;
+    lightOn      = false; lightOffTime = 0;
+    dotUnit      = 130;
+    rxMorseBuffer = ''; rxTextBuffer = '';
+
     document.getElementById('rxBtn').textContent = '⛔ Stop Receiving';
     document.getElementById('rxBtn').classList.add('recording');
-    document.getElementById('rxStatus').textContent = 'Calibrating... (aim at light source)';
+    document.getElementById('rxStatus').textContent = 'Calibrating... (aim at the flashlight)';
     document.getElementById('rxDot').classList.add('on');
-    calibrating = true;
-    calibFrames = 0;
-    calibSamples = [];
-    baselineLow = 999; baselineHigh = 0;
-    lightOn = false;
-    rxMorseBuffer = '';
-    rxTextBuffer = '';
+
     rxInterval = setInterval(processFrame, 50);
   } catch(e) {
-    alert('Camera access denied or unavailable.');
+    alert('Camera access denied or unavailable. Please allow camera permission and try again.');
   }
 }
 
 function stopReceive() {
   rxActive = false;
   clearInterval(rxInterval);
+  clearTimeout(charTimer); clearTimeout(wordTimer);
   if (rxStream) rxStream.getTracks().forEach(t => t.stop());
   rxStream = null;
   document.getElementById('rxBtn').textContent = '📷 Start Receiving';
@@ -400,125 +392,105 @@ function stopReceive() {
 }
 
 function getBrightness() {
-  ctx.drawImage(video, 0, 0, 32, 32);
-  const data = ctx.getImageData(8, 8, 16, 16).data;
+  ctx.drawImage(video, 0, 0, 64, 64);
+  const d = ctx.getImageData(16, 16, 32, 32).data;
   let sum = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    sum += (data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114);
-  }
-  return sum / (data.length / 4);
+  for (let i = 0; i < d.length; i += 4)
+    sum += d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+  return sum / (d.length / 4);
 }
 
 function processFrame() {
   let b;
   try { b = getBrightness(); } catch(e) { return; }
-
   const now = Date.now();
 
   if (calibrating) {
-    calibSamples.push(b);
-    calibFrames++;
-    if (b < baselineLow) baselineLow = b;
+    if (b < baselineLow)  baselineLow  = b;
     if (b > baselineHigh) baselineHigh = b;
-    if (calibFrames >= 30) { // ~1.5s
+    calibFrames++;
+    if (calibFrames >= 30) {
       calibrating = false;
       document.getElementById('rxStatus').textContent = 'Listening...';
     }
     return;
   }
 
-  // Dynamic threshold
+  // Adaptive threshold — midpoint between observed dark/light
   const range = baselineHigh - baselineLow;
-  const threshold = baselineLow + Math.max(range * 0.4, 15);
+  const threshold = baselineLow + Math.max(range * 0.45, 12);
 
-  // Update meter
-  const pct = Math.min(100, Math.max(0, ((b - baselineLow) / Math.max(range, 20)) * 100));
-  document.getElementById('lightMeter').style.width = pct + '%';
-
-  // Update baseline slowly
-  if (b < baselineLow + 5) baselineLow = baselineLow * 0.98 + b * 0.02;
+  // Update dark baseline slowly
+  if (b < threshold) baselineLow = baselineLow * 0.97 + b * 0.03;
 
   const isOn = b > threshold;
 
-  if (isOn && !lightOn) {
-    // Rising edge
-    lightOn = true;
-    const offDur = now - lightOffTime;
-    lightOnTime = now;
-    clearTimeout(charTimer);
-    clearTimeout(wordTimer);
+  // Light meter
+  document.getElementById('lightMeter').style.width =
+    Math.min(100, Math.max(0, ((b - baselineLow) / Math.max(range, 20)) * 100)) + '%';
 
-    if (lightOffTime > 0 && offDur > 0) {
-      // Classify gap
-      if (offDur > dotUnit * 5) {
-        // word gap
-        flushChar();
-        flushWord();
-      } else if (offDur > dotUnit * 2) {
-        // char gap
-        flushChar();
-      }
-      // else symbol gap, do nothing
-    }
-  } else if (!isOn && lightOn) {
-    // Falling edge
+  // Rising edge
+  if (isOn && !lightOn) {
+    lightOn = true;
+    clearTimeout(charTimer); clearTimeout(wordTimer);
+    const offDur = lightOffTime > 0 ? now - lightOffTime : 0;
+    if (offDur > dotUnit * 5)       { flushChar(); flushWord(); }
+    else if (offDur > dotUnit * 2)  { flushChar(); }
+    lightOnTime = now;
+  }
+  // Falling edge
+  else if (!isOn && lightOn) {
     lightOn = false;
     const onDur = now - lightOnTime;
     lightOffTime = now;
 
-    // Classify symbol
     const sym = onDur > dotUnit * 2 ? '-' : '.';
     rxMorseBuffer += sym;
 
-    // Auto-calibrate dot unit from first few symbols
-    if (sym === '.' && dotUnit === 100 && onDur > 20) {
-      dotUnit = Math.round(onDur * 1.2);
+    // Auto-calibrate dot unit from short pulses
+    if (sym === '.' && onDur > 20 && onDur < dotUnit * 2) {
+      dotUnit = Math.round(dotUnit * 0.8 + onDur * 1.2 * 0.2);
     }
 
     document.getElementById('receive-morse').textContent =
-      (rxTextBuffer ? rxTextBuffer + ' | ' : '') + rxMorseBuffer || '—';
+      (rxTextBuffer ? '[' + rxTextBuffer.trim() + '] ' : '') + rxMorseBuffer || '—';
 
-    // Set char timer
-    charTimer = setTimeout(() => { flushChar(); }, dotUnit * 3.5);
-    wordTimer = setTimeout(() => { flushWord(); }, dotUnit * 7);
+    charTimer = setTimeout(() => flushChar(), dotUnit * 3.5);
+    wordTimer = setTimeout(() => flushWord(), dotUnit * 7);
   }
 
-  // Visual indicator
-  document.getElementById('rxDot').style.background = isOn ? '#ffe066' : '';
-  document.getElementById('rxDot').style.boxShadow = isOn ? '0 0 10px #ffe066' : '';
+  // Visual flash indicator
+  const dot = document.getElementById('rxDot');
+  dot.style.background   = isOn ? '#ffe066' : '#333';
+  dot.style.boxShadow    = isOn ? '0 0 10px #ffe066' : 'none';
+  document.getElementById('rxStatus').textContent = isOn ? '🔦 Flash detected!' : 'Listening...';
 }
 
 function flushChar() {
   if (!rxMorseBuffer) return;
-  const ch = MORSE_REV[rxMorseBuffer] || '?';
-  rxTextBuffer += ch;
-  document.getElementById('receive-output').textContent = rxTextBuffer || '—';
+  rxTextBuffer += MORSE_REV[rxMorseBuffer] || '?';
+  document.getElementById('receive-output').textContent = rxTextBuffer.trim() || '—';
   rxMorseBuffer = '';
+  document.getElementById('receive-morse').textContent = rxMorseBuffer || '—';
 }
-
 function flushWord() {
   flushChar();
   rxTextBuffer += ' ';
   document.getElementById('receive-output').textContent = rxTextBuffer.trim() || '—';
 }
-
 function clearReceived() {
-  rxMorseBuffer = '';
-  rxTextBuffer = '';
+  clearTimeout(charTimer); clearTimeout(wordTimer);
+  rxMorseBuffer = ''; rxTextBuffer = '';
   document.getElementById('receive-morse').textContent = '—';
   document.getElementById('receive-output').textContent = '—';
-  calibrating = true;
-  calibFrames = 0;
-  calibSamples = [];
-  baselineLow = 999; baselineHigh = 0;
-  dotUnit = 100;
+  baselineLow = 999; baselineHigh = 0; dotUnit = 130;
+  calibrating = true; calibFrames = 0;
   if (rxActive) document.getElementById('rxStatus').textContent = 'Calibrating...';
 }
 
 function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['send','receive','ref'][i] === tab);
-  });
+  document.querySelectorAll('.tab').forEach((t,i) =>
+    t.classList.toggle('active', ['send','receive','ref'][i] === tab));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + tab).classList.add('active');
 }
