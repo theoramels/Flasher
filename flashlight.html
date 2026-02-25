@@ -10,11 +10,8 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #0a0a0f;
-    color: #e0e0e0;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    background: #0a0a0f; color: #e0e0e0;
+    min-height: 100vh; display: flex; flex-direction: column;
   }
   header { text-align: center; padding: 24px 16px 12px; }
   header h1 { font-size: 1.6rem; letter-spacing: 2px; color: #fff; }
@@ -25,9 +22,8 @@
     border-radius: 12px; overflow: hidden; background: #1a1a2e;
   }
   .tab {
-    flex: 1; padding: 12px; text-align: center;
-    cursor: pointer; font-size: 0.95rem; font-weight: 600;
-    color: #888; transition: all 0.2s;
+    flex: 1; padding: 12px; text-align: center; cursor: pointer;
+    font-size: 0.95rem; font-weight: 600; color: #888; transition: all 0.2s;
     border: none; background: transparent;
   }
   .tab.active { background: #4f8ef7; color: #fff; border-radius: 12px; }
@@ -57,19 +53,18 @@
     font-size: 1.1rem; font-weight: 700; cursor: pointer;
     transition: all 0.15s; width: 100%;
   }
-  .btn-send { background: #4f8ef7; color: #fff; }
-  .btn-send:active { background: #2d6ed6; }
-  .btn-send:disabled { background: #2a2a4a; color: #555; cursor: default; }
-  .btn-stop { background: #e74c3c; color: #fff; }
-  .btn-receive { background: #2ecc71; color: #fff; }
-  .btn-receive.recording { background: #e74c3c; }
+  .btn-blue  { background: #4f8ef7; color: #fff; }
+  .btn-blue:active { background: #2d6ed6; }
+  .btn-red   { background: #e74c3c; color: #fff; }
+  .btn-green { background: #2ecc71; color: #fff; }
+  .btn-green.recording { background: #e74c3c; }
+  .btn-orange { background: #e67e22; color: #fff; }
+  button:disabled { background: #2a2a4a !important; color: #555 !important; cursor: default; }
 
   .status-dot {
     width: 12px; height: 12px; border-radius: 50%;
     background: #333; display: inline-block; margin-right: 8px; transition: background 0.1s;
   }
-  .status-dot.on { background: #ffe066; box-shadow: 0 0 10px #ffe066; }
-
   .status-bar {
     display: flex; align-items: center; padding: 10px 14px;
     background: #1a1a2e; border-radius: 10px; font-size: 0.9rem;
@@ -86,28 +81,35 @@
     min-height: 40px; word-break: break-all; letter-spacing: 2px;
   }
 
+  .calib-box {
+    background: #1a1a2e; border: 1px solid #2a2a4a;
+    border-radius: 12px; padding: 14px; font-size: 0.85rem;
+    line-height: 1.8; color: #aaa;
+  }
+  .calib-box strong { color: #fff; }
+  .calib-value { color: #4f8ef7; font-family: monospace; font-size: 1rem; }
+  .calib-ok    { color: #2ecc71; }
+  .calib-warn  { color: #e67e22; }
+
   .hint { font-size: 0.78rem; color: #555; text-align: center; line-height: 1.5; }
   canvas#camCanvas { display: none; }
-
-  .light-meter { height: 8px; border-radius: 4px; background: #1a1a2e; overflow: hidden; margin-top: 4px; }
+  .light-meter { height: 8px; border-radius: 4px; background: #1a1a2e; overflow: hidden; }
   .light-meter-fill { height: 100%; width: 0%; background: #2ecc71; transition: width 0.05s; border-radius: 4px; }
-
   .section-label { font-size: 0.75rem; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -8px; }
-
   .device-badge {
     text-align: center; font-size: 0.75rem; padding: 4px 10px;
-    background: #1a1a2e; border-radius: 20px; color: #555; margin: 0 auto;
-    width: fit-content;
+    background: #1a1a2e; border-radius: 20px; color: #555; margin: 0 auto; width: fit-content;
   }
+  .row { display: flex; gap: 10px; }
+  .row .main-btn { flex: 1; }
 </style>
 </head>
 <body>
 <header>
   <h1>⚡ MORSE LIGHT</h1>
-  <p>Flashlight Morse Code Communicator <br> Now Supporting Android! </p>
+  <p>Flashlight Morse Code Communicator <br> Now with Calibration!</p>
 </header>
-<div class="device-badge" id="deviceBadge">Detecting device...</div>
-
+<div class="device-badge" id="deviceBadge">Detecting...</div>
 <br>
 <div class="tabs">
   <button class="tab active" onclick="switchTab('send')">📡 Transmit</button>
@@ -115,7 +117,7 @@
   <button class="tab" onclick="switchTab('ref')">📖 Reference</button>
 </div>
 
-<!-- TRANSMIT PANEL -->
+<!-- ══ TRANSMIT ══ -->
 <div id="panel-send" class="panel active">
   <p class="section-label">Message</p>
   <textarea id="msgInput" placeholder="Type your message here..." oninput="updateMorse()"></textarea>
@@ -130,47 +132,60 @@
 
   <div class="status-bar">
     <span class="status-dot" id="flashDot"></span>
-    <span id="sendStatus">Ready to transmit</span>
+    <span id="sendStatus">Ready</span>
   </div>
 
-  <button class="main-btn btn-send" id="sendBtn" onclick="startTransmit()">⚡ Transmit</button>
-  <button class="main-btn btn-stop" id="stopBtn" onclick="stopTransmit()" style="display:none">⛔ Stop</button>
+  <div class="row">
+    <button class="main-btn btn-orange" id="calibBtn" onclick="startCalibTransmit()">📶 Send Calibration</button>
+    <button class="main-btn btn-blue"   id="sendBtn"  onclick="startTransmit()">⚡ Transmit</button>
+  </div>
+  <button class="main-btn btn-red" id="stopBtn" onclick="stopTransmit()" style="display:none">⛔ Stop</button>
 
-  <p class="hint">Keep screen brightness at max. Point the camera end of your phone toward the receiving device. Works best in a dim room, ~1–3 feet apart.</p>
+  <p class="hint">Step 1: Both phones point at each other. Tap <strong>Send Calibration</strong> while the other phone taps <strong>Run Calibration</strong>. Then transmit your message.</p>
 </div>
 
-<!-- RECEIVE PANEL -->
+<!-- ══ RECEIVE ══ -->
 <div id="panel-receive" class="panel">
   <div class="status-bar">
     <span class="status-dot" id="rxDot"></span>
-    <span id="rxStatus">Press Start to begin receiving</span>
+    <span id="rxStatus">Press Start to begin</span>
+  </div>
+  <div class="light-meter"><div class="light-meter-fill" id="lightMeter"></div></div>
+
+  <!-- Calibration result display -->
+  <div class="calib-box" id="calibResult">
+    <strong>Timing Calibration</strong><br>
+    Dot unit: <span class="calib-value" id="cr-dot">not set</span><br>
+    Dash threshold: <span class="calib-value" id="cr-dash">not set</span><br>
+    Gap threshold: <span class="calib-value" id="cr-gap">not set</span><br>
+    Status: <span id="cr-status" class="calib-warn">⚠ Run calibration before receiving</span>
   </div>
 
-  <div class="light-meter"><div class="light-meter-fill" id="lightMeter"></div></div>
+  <div class="row">
+    <button class="main-btn btn-orange" id="runCalibBtn" onclick="toggleCalib()">📶 Run Calibration</button>
+    <button class="main-btn btn-green"  id="rxBtn"       onclick="toggleReceive()">📷 Start Receiving</button>
+  </div>
+  <button class="main-btn btn-red" onclick="clearReceived()">🗑 Clear</button>
 
   <p class="section-label">Decoded Morse</p>
   <div id="receive-morse">—</div>
-
   <p class="section-label">Decoded Text</p>
   <div id="receive-output">—</div>
-
-  <button class="main-btn btn-receive" id="rxBtn" onclick="toggleReceive()">📷 Start Receiving</button>
-  <button class="main-btn btn-stop" onclick="clearReceived()" style="margin-top:0">🗑 Clear</button>
 
   <canvas id="camCanvas"></canvas>
   <video id="camVideo" autoplay playsinline muted style="display:none"></video>
 
-  <p class="hint">Point this phone's camera at the other phone's flashlight. Tap Start, wait for "Listening...", then have the other device transmit.</p>
+  <p class="hint">Point this phone's camera directly at the other phone's flashlight. Works best in a dim room ~1–3 feet apart.</p>
 </div>
 
-<!-- REFERENCE PANEL -->
+<!-- ══ REFERENCE ══ -->
 <div id="panel-ref" class="panel">
-  <p style="color:#888; font-size:0.9rem;">International Morse Code reference:</p>
-  <div id="refGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-family:monospace;"></div>
+  <p style="color:#888;font-size:0.9rem;">International Morse Code:</p>
+  <div id="refGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-family:monospace;"></div>
 </div>
 
 <script>
-// ── Morse tables ──────────────────────────────────────────────
+// ── Morse tables ──────────────────────────────────────────────────────────────
 const MORSE = {
   'A':'.-','B':'-...','C':'-.-.','D':'-..','E':'.','F':'..-.','G':'--.','H':'....','I':'..','J':'.---',
   'K':'-.-','L':'.-..','M':'--','N':'-.','O':'---','P':'.--.','Q':'--.-','R':'.-.','S':'...','T':'-',
@@ -180,27 +195,23 @@ const MORSE = {
 };
 const MORSE_REV = Object.fromEntries(Object.entries(MORSE).map(([k,v])=>[v,k]));
 
-// ── Device detection ─────────────────────────────────────────
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-const isAndroid = /Android/.test(navigator.userAgent);
+// ── Device detection ──────────────────────────────────────────────────────────
 document.getElementById('deviceBadge').textContent =
-  isIOS ? '🍎 iOS Device' : isAndroid ? '🤖 Android Device' : '💻 Desktop Browser';
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ? '🍎 iOS Device' :
+  /Android/.test(navigator.userAgent)          ? '🤖 Android Device' : '💻 Desktop Browser';
 
-// ── Reference grid ────────────────────────────────────────────
+// ── Reference grid ────────────────────────────────────────────────────────────
 const refGrid = document.getElementById('refGrid');
-Object.entries(MORSE).forEach(([ch, code]) => {
+Object.entries(MORSE).forEach(([ch,code]) => {
   const el = document.createElement('div');
   el.style.cssText = 'background:#1a1a2e;padding:8px 10px;border-radius:8px;display:flex;justify-content:space-between;';
   el.innerHTML = `<span style="color:#fff;font-weight:700">${ch}</span><span style="color:#4f8ef7">${code}</span>`;
   refGrid.appendChild(el);
 });
 
-// ── Helpers ───────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function textToMorse(txt) {
-  return txt.toUpperCase().split('').map(c => {
-    if (c === ' ') return '/';
-    return MORSE[c] || '';
-  }).filter(x => x !== '').join(' ');
+  return txt.toUpperCase().split('').map(c => c === ' ' ? '/' : (MORSE[c] || '')).filter(x=>x).join(' ');
 }
 function updateMorse() {
   document.getElementById('morsePreview').textContent = textToMorse(document.getElementById('msgInput').value) || '—';
@@ -208,291 +219,459 @@ function updateMorse() {
 const speedLabels = ['Very Slow','Slow','Medium','Fast','Very Fast'];
 const speedDots   = [300, 200, 130, 80, 50];
 function updateSpeedLabel() {
-  document.getElementById('speedLabel').textContent = speedLabels[+document.getElementById('speedSlider').value - 1];
+  document.getElementById('speedLabel').textContent = speedLabels[+document.getElementById('speedSlider').value-1];
 }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ── Wake Lock (keeps screen on during transmit on Android/iOS) ─
+// ── Wake Lock ─────────────────────────────────────────────────────────────────
 let wakeLock = null;
 async function requestWakeLock() {
-  if ('wakeLock' in navigator) {
-    try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e) {}
-  }
+  if ('wakeLock' in navigator) try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
 }
-function releaseWakeLock() {
-  if (wakeLock) { wakeLock.release(); wakeLock = null; }
-}
+function releaseWakeLock() { if (wakeLock) { wakeLock.release(); wakeLock = null; } }
 
-// ── Torch helpers ─────────────────────────────────────────────
+// ── Torch ─────────────────────────────────────────────────────────────────────
 async function getTorchTrack() {
-  // Try rear camera with torch
-  const constraints = [
-    // Android Chrome style
+  for (const c of [
     { video: { facingMode: { exact: 'environment' } } },
-    // iOS / fallback
     { video: { facingMode: 'environment' } },
-    // last resort
     { video: true }
-  ];
-  for (const c of constraints) {
+  ]) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia(c);
-      const track = stream.getVideoTracks()[0];
-      const caps = track.getCapabilities ? track.getCapabilities() : {};
-      // Check torch support
-      if (caps.torch) {
-        return { stream, track, torchSupported: true };
-      }
-      // Some Android devices expose torch only after apply
-      try {
-        await track.applyConstraints({ advanced: [{ torch: false }] });
-        return { stream, track, torchSupported: true };
-      } catch(e) {
-        // torch not supported on this track, try next
-        stream.getTracks().forEach(t => t.stop());
-      }
-    } catch(e) { /* try next */ }
+      const track  = stream.getVideoTracks()[0];
+      try { await track.applyConstraints({ advanced: [{ torch: false }] }); return { stream, track }; }
+      catch(e) { stream.getTracks().forEach(t=>t.stop()); }
+    } catch(e) {}
   }
   return null;
 }
-
 async function setTorch(track, on) {
-  try {
-    await track.applyConstraints({ advanced: [{ torch: on }] });
-  } catch(e) {}
+  try { await track.applyConstraints({ advanced: [{ torch: on }] }); } catch(e){}
 }
 
-// ── Transmit ──────────────────────────────────────────────────
+// ── Calibration sequence definition ──────────────────────────────────────────
+// Pattern: 4 dots, pause, 4 dashes, pause, ".-" x3  (known dot/dash/gap mix)
+// This gives the receiver clear examples of dot durations, dash durations, and char gaps.
+function buildCalibPattern(dot) {
+  const dash = dot * 3, sym = dot, chr = dot * 3;
+  const seq = [];
+  // 4 dots
+  for (let i=0;i<4;i++) { seq.push([true,dot]); if(i<3) seq.push([false,sym]); }
+  seq.push([false, chr]);
+  // 4 dashes
+  for (let i=0;i<4;i++) { seq.push([true,dash]); if(i<3) seq.push([false,sym]); }
+  seq.push([false, chr]);
+  // ".-" repeated 3 times (known letter A)
+  for (let i=0;i<3;i++) {
+    seq.push([true,dot]);  seq.push([false,sym]);
+    seq.push([true,dash]); if(i<2) seq.push([false,chr]);
+  }
+  return seq;
+}
+
+// ── Transmit helpers ──────────────────────────────────────────────────────────
 let stopRequested = false;
+let txTrack = null, txStream = null;
+
+async function acquireTorch() {
+  const result = await getTorchTrack();
+  if (!result) {
+    document.getElementById('sendStatus').textContent = '⚠️ Torch not available.';
+    resetSendUI(); releaseWakeLock(); return null;
+  }
+  txStream = result.stream; txTrack = result.track;
+  return result.track;
+}
+
+async function runFlashSequence(track, seq, statusEl) {
+  for (const [on, dur] of seq) {
+    if (stopRequested) break;
+    await setTorch(track, on);
+    if (on) document.getElementById('flashDot').classList.add('on');
+    else    document.getElementById('flashDot').classList.remove('on');
+    await sleep(dur);
+  }
+  await setTorch(track, false);
+  document.getElementById('flashDot').classList.remove('on');
+}
+
+async function startCalibTransmit() {
+  document.getElementById('sendStatus').textContent = 'Sending calibration...';
+  document.getElementById('calibBtn').disabled = true;
+  document.getElementById('sendBtn').disabled  = true;
+  document.getElementById('stopBtn').style.display = 'block';
+  stopRequested = false;
+  await requestWakeLock();
+
+  const track = await acquireTorch();
+  if (!track) { document.getElementById('calibBtn').disabled = false; document.getElementById('sendBtn').disabled = false; return; }
+
+  const dot = speedDots[+document.getElementById('speedSlider').value-1];
+  // Send calibration pattern twice so receiver has plenty of data
+  for (let r=0; r<2 && !stopRequested; r++) {
+    document.getElementById('sendStatus').textContent = `Calibration pass ${r+1}/2...`;
+    await runFlashSequence(track, buildCalibPattern(dot), null);
+    await sleep(dot * 7);
+  }
+
+  txStream.getTracks().forEach(t=>t.stop()); txStream=null; txTrack=null;
+  releaseWakeLock();
+  document.getElementById('sendStatus').textContent = stopRequested ? 'Stopped.' : '✅ Calibration sent!';
+  resetSendUI();
+}
 
 async function startTransmit() {
   const txt = document.getElementById('msgInput').value.trim();
-  if (!txt) { alert('Please enter a message first.'); return; }
+  if (!txt) { alert('Please enter a message.'); return; }
   const morse = textToMorse(txt);
-  if (!morse) return;
 
-  document.getElementById('sendBtn').style.display = 'none';
+  document.getElementById('sendBtn').disabled  = true;
+  document.getElementById('calibBtn').disabled = true;
   document.getElementById('stopBtn').style.display = 'block';
   document.getElementById('sendStatus').textContent = 'Requesting torch...';
   stopRequested = false;
-
   await requestWakeLock();
 
-  const result = await getTorchTrack();
-  if (!result || !result.torchSupported) {
-    document.getElementById('sendStatus').textContent = '⚠️ Torch not available. Try Chrome on Android or Safari on iOS.';
-    resetSendUI(); releaseWakeLock(); return;
-  }
-  const { stream, track } = result;
+  const track = await acquireTorch();
+  if (!track) return;
 
-  const dot  = speedDots[+document.getElementById('speedSlider').value - 1];
-  const dash = dot * 3, symGap = dot, charGap = dot * 3, wordGap = dot * 7;
-  const flashDot   = document.getElementById('flashDot');
-  const sendStatus = document.getElementById('sendStatus');
-
-  const flash = async (dur) => {
-    await setTorch(track, true);  flashDot.classList.add('on');
+  const dot  = speedDots[+document.getElementById('speedSlider').value-1];
+  const dash = dot*3, symGap = dot, charGap = dot*3, wordGap = dot*7;
+  const flash = async(dur) => {
+    await setTorch(track,true);  document.getElementById('flashDot').classList.add('on');
     await sleep(dur);
-    await setTorch(track, false); flashDot.classList.remove('on');
+    await setTorch(track,false); document.getElementById('flashDot').classList.remove('on');
   };
 
-  // Preamble: 5 dots so receiver can calibrate timing
-  sendStatus.textContent = 'Sending calibration pulses...';
-  for (let i = 0; i < 5 && !stopRequested; i++) {
-    await flash(dot);
-    await sleep(dot);
-  }
-  await sleep(charGap);
-
   const tokens = morse.split(' ');
-  for (let t = 0; t < tokens.length && !stopRequested; t++) {
+  for (let t=0; t<tokens.length && !stopRequested; t++) {
     const token = tokens[t];
-    if (token === '/') { await sleep(wordGap - charGap); continue; }
-    sendStatus.textContent = `Sending: ${token}`;
-    for (let s = 0; s < token.length && !stopRequested; s++) {
-      await flash(token[s] === '.' ? dot : dash);
-      if (s < token.length - 1) await sleep(symGap);
+    if (token==='/') { await sleep(wordGap-charGap); continue; }
+    document.getElementById('sendStatus').textContent = `Sending: ${token}`;
+    for (let s=0; s<token.length && !stopRequested; s++) {
+      await flash(token[s]==='.'?dot:dash);
+      if (s<token.length-1) await sleep(symGap);
     }
-    if (t < tokens.length - 1 && tokens[t + 1] !== '/') await sleep(charGap);
-    else if (tokens[t + 1] === '/') await sleep(charGap);
+    if (t<tokens.length-1 && tokens[t+1]!=='/') await sleep(charGap);
   }
 
-  await setTorch(track, false);
-  flashDot.classList.remove('on');
-  stream.getTracks().forEach(t => t.stop());
+  txStream.getTracks().forEach(t=>t.stop()); txStream=null; txTrack=null;
   releaseWakeLock();
-  sendStatus.textContent = stopRequested ? 'Stopped.' : '✅ Transmission complete!';
+  document.getElementById('sendStatus').textContent = stopRequested ? 'Stopped.' : '✅ Done!';
   resetSendUI();
 }
 
 function stopTransmit() { stopRequested = true; }
 function resetSendUI() {
-  document.getElementById('sendBtn').style.display = 'block';
+  document.getElementById('sendBtn').disabled  = false;
+  document.getElementById('calibBtn').disabled = false;
   document.getElementById('stopBtn').style.display = 'none';
 }
 
-// ── Receive ───────────────────────────────────────────────────
-let rxActive = false, rxStream = null, rxInterval = null;
-let rxMorseBuffer = '', rxTextBuffer = '';
-let lightOn = false, lightOnTime = 0, lightOffTime = 0;
-let baselineLow = 999, baselineHigh = 0;
-let calibrating = true, calibFrames = 0;
-let dotUnit = 130;
-let charTimer = null, wordTimer = null;
-
+// ── Receive & Calibration ─────────────────────────────────────────────────────
 const video  = document.getElementById('camVideo');
 const canvas = document.getElementById('camCanvas');
 const ctx    = canvas.getContext('2d');
 
-async function toggleReceive() {
-  rxActive ? stopReceive() : await startReceive();
-}
+let rxActive=false, rxStream=null, rxInterval=null;
+let rxMorseBuffer='', rxTextBuffer='';
+let lightOn=false, lightOnTime=0, lightOffTime=0;
+let baselineLow=999, baselineHigh=0;
+let brightCalibFrames=0, brightCalibDone=false;
 
-async function startReceive() {
-  try {
-    // Request rear camera; muted is important on some Android versions
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 64 }, height: { ideal: 64 } },
-      audio: false
-    });
-    video.srcObject = stream;
-    await video.play().catch(()=>{});
-    canvas.width = 64; canvas.height = 64;
-    rxStream  = stream;
-    rxActive  = true;
-    calibrating  = true;
-    calibFrames  = 0;
-    baselineLow  = 999; baselineHigh = 0;
-    lightOn      = false; lightOffTime = 0;
-    dotUnit      = 130;
-    rxMorseBuffer = ''; rxTextBuffer = '';
+// Timing calibration state
+let calibMode=false;          // true when running calibration listen
+let calibPulses=[];           // recorded ON durations
+let calibGaps=[];             // recorded OFF durations (between symbols)
+let calibLastOff=0;
+let calibLightOn=false;
+let calibLightOnTime=0;
 
-    document.getElementById('rxBtn').textContent = '⛔ Stop Receiving';
-    document.getElementById('rxBtn').classList.add('recording');
-    document.getElementById('rxStatus').textContent = 'Calibrating... (aim at the flashlight)';
-    document.getElementById('rxDot').classList.add('on');
+// Learned thresholds (ms)
+let dotUnit    = 130;         // estimated dot duration
+let dotDashMid = 0;           // midpoint between dot and dash durations — 0 = not calibrated
+let symGapMid  = 0;           // midpoint between sym-gap and char-gap
+let calibrated = false;
 
-    rxInterval = setInterval(processFrame, 50);
-  } catch(e) {
-    alert('Camera access denied or unavailable. Please allow camera permission and try again.');
-  }
-}
-
-function stopReceive() {
-  rxActive = false;
-  clearInterval(rxInterval);
-  clearTimeout(charTimer); clearTimeout(wordTimer);
-  if (rxStream) rxStream.getTracks().forEach(t => t.stop());
-  rxStream = null;
-  document.getElementById('rxBtn').textContent = '📷 Start Receiving';
-  document.getElementById('rxBtn').classList.remove('recording');
-  document.getElementById('rxStatus').textContent = 'Stopped.';
-  document.getElementById('rxDot').classList.remove('on');
-  document.getElementById('lightMeter').style.width = '0%';
-}
+let charTimer=null, wordTimer=null;
 
 function getBrightness() {
   ctx.drawImage(video, 0, 0, 64, 64);
-  const d = ctx.getImageData(16, 16, 32, 32).data;
-  let sum = 0;
-  for (let i = 0; i < d.length; i += 4)
-    sum += d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
-  return sum / (d.length / 4);
+  const d = ctx.getImageData(16,16,32,32).data;
+  let s=0;
+  for (let i=0;i<d.length;i+=4) s += d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
+  return s/(d.length/4);
 }
 
+function getLightThreshold() {
+  return baselineLow + Math.max((baselineHigh-baselineLow)*0.45, 12);
+}
+
+// ── Calibration receive mode ──────────────────────────────────────────────────
+function toggleCalib() {
+  if (!rxActive) {
+    // Start camera first, then go into calib mode
+    startCamera(true);
+  } else if (calibMode) {
+    finishCalib();
+    stopCamera();
+  } else {
+    // camera already running for receive — restart in calib mode
+    stopCamera();
+    startCamera(true);
+  }
+}
+
+async function startCamera(forCalib) {
+  try {
+    rxStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width:{ideal:64}, height:{ideal:64} },
+      audio: false
+    });
+    video.srcObject = rxStream;
+    await video.play().catch(()=>{});
+    canvas.width=64; canvas.height=64;
+    rxActive=true;
+    brightCalibFrames=0; brightCalibDone=false;
+    baselineLow=999; baselineHigh=0;
+
+    if (forCalib) {
+      calibMode=true; calibPulses=[]; calibGaps=[];
+      calibLightOn=false; calibLastOff=0;
+      document.getElementById('runCalibBtn').textContent = '⏹ Stop Calibration';
+      document.getElementById('rxStatus').textContent = 'Brightness calibrating... aim at light';
+      document.getElementById('cr-status').className = 'calib-warn';
+      document.getElementById('cr-status').textContent = '⏳ Listening for calibration signal...';
+    } else {
+      calibMode=false;
+      document.getElementById('rxBtn').textContent = '⛔ Stop Receiving';
+      document.getElementById('rxBtn').classList.add('recording');
+      document.getElementById('rxStatus').textContent = 'Calibrating brightness...';
+    }
+
+    rxMorseBuffer=''; 
+    lightOn=false; lightOffTime=0;
+    rxInterval = setInterval(processFrame, 50);
+  } catch(e) {
+    alert('Camera access denied. Please allow camera permission.');
+  }
+}
+
+function stopCamera() {
+  clearInterval(rxInterval);
+  clearTimeout(charTimer); clearTimeout(wordTimer);
+  if (rxStream) rxStream.getTracks().forEach(t=>t.stop());
+  rxStream=null; rxActive=false; calibMode=false;
+  document.getElementById('rxBtn').textContent = '📷 Start Receiving';
+  document.getElementById('rxBtn').classList.remove('recording');
+  document.getElementById('runCalibBtn').textContent = '📶 Run Calibration';
+  document.getElementById('rxStatus').textContent = 'Stopped.';
+  document.getElementById('rxDot').style.background='#333';
+  document.getElementById('rxDot').style.boxShadow='none';
+  document.getElementById('lightMeter').style.width='0%';
+}
+
+function finishCalib() {
+  // Analyse captured pulses to find dot unit and dash threshold
+  if (calibPulses.length < 4) {
+    document.getElementById('cr-status').className='calib-warn';
+    document.getElementById('cr-status').textContent='⚠ Not enough data. Try again closer/darker.';
+    return;
+  }
+
+  // Sort pulses — short ones are dots, long ones are dashes
+  const sorted = [...calibPulses].sort((a,b)=>a-b);
+  const mid    = Math.floor(sorted.length/2);
+
+  // Find natural gap in durations (k-means style: 2 clusters)
+  let bestSplit=0, bestScore=-Infinity;
+  for (let i=1;i<sorted.length;i++) {
+    const gap = sorted[i]-sorted[i-1];
+    if (gap > bestScore) { bestScore=gap; bestSplit=i; }
+  }
+  const dots  = sorted.slice(0, bestSplit);
+  const dashes= sorted.slice(bestSplit);
+
+  if (dots.length===0 || dashes.length===0) {
+    document.getElementById('cr-status').className='calib-warn';
+    document.getElementById('cr-status').textContent='⚠ Could not distinguish dots from dashes. Try again.';
+    return;
+  }
+
+  const avgDot  = dots.reduce((a,b)=>a+b,0)  / dots.length;
+  const avgDash = dashes.reduce((a,b)=>a+b,0) / dashes.length;
+  dotDashMid    = (avgDot + avgDash) / 2;
+  dotUnit       = Math.round(avgDot);
+
+  // Analyse gaps to find sym-gap vs char-gap threshold
+  let symGapMidCalc = dotUnit * 2; // fallback
+  if (calibGaps.length >= 4) {
+    const sortedGaps = [...calibGaps].sort((a,b)=>a-b);
+    let bestGapSplit=0, bestGapScore=-Infinity;
+    for (let i=1;i<sortedGaps.length;i++) {
+      const g = sortedGaps[i]-sortedGaps[i-1];
+      if (g > bestGapScore) { bestGapScore=g; bestGapSplit=i; }
+    }
+    const symGaps  = sortedGaps.slice(0, bestGapSplit);
+    const charGaps = sortedGaps.slice(bestGapSplit);
+    if (symGaps.length>0 && charGaps.length>0) {
+      const avgSym  = symGaps.reduce((a,b)=>a+b,0)/symGaps.length;
+      const avgChar = charGaps.reduce((a,b)=>a+b,0)/charGaps.length;
+      symGapMid = (avgSym+avgChar)/2;
+      symGapMidCalc = symGapMid;
+    }
+  }
+  symGapMid = symGapMidCalc;
+  calibrated = true;
+
+  document.getElementById('cr-dot').textContent  = `${Math.round(avgDot)}ms (avg dot)`;
+  document.getElementById('cr-dash').textContent = `>${Math.round(dotDashMid)}ms = dash`;
+  document.getElementById('cr-gap').textContent  = `>${Math.round(symGapMid)}ms = letter gap`;
+  document.getElementById('cr-status').className = 'calib-ok';
+  document.getElementById('cr-status').textContent = '✅ Calibrated! Ready to receive.';
+}
+
+// ── Toggle receive ────────────────────────────────────────────────────────────
+async function toggleReceive() {
+  if (!rxActive) {
+    await startCamera(false);
+  } else if (!calibMode) {
+    stopCamera();
+  } else {
+    finishCalib();
+    stopCamera();
+    await startCamera(false);
+  }
+}
+
+// ── Frame processing ──────────────────────────────────────────────────────────
 function processFrame() {
   let b;
-  try { b = getBrightness(); } catch(e) { return; }
+  try { b=getBrightness(); } catch(e){ return; }
   const now = Date.now();
 
-  if (calibrating) {
-    if (b < baselineLow)  baselineLow  = b;
-    if (b > baselineHigh) baselineHigh = b;
-    calibFrames++;
-    if (calibFrames >= 30) {
-      calibrating = false;
-      document.getElementById('rxStatus').textContent = 'Listening...';
+  // Brightness baseline calibration (first 30 frames)
+  if (!brightCalibDone) {
+    if (b<baselineLow)  baselineLow=b;
+    if (b>baselineHigh) baselineHigh=b;
+    brightCalibFrames++;
+    if (brightCalibFrames>=30) {
+      brightCalibDone=true;
+      document.getElementById('rxStatus').textContent = calibMode ? 'Listening for calibration signal...' : 'Listening...';
     }
     return;
   }
 
-  // Adaptive threshold — midpoint between observed dark/light
-  const range = baselineHigh - baselineLow;
-  const threshold = baselineLow + Math.max(range * 0.45, 12);
-
-  // Update dark baseline slowly
-  if (b < threshold) baselineLow = baselineLow * 0.97 + b * 0.03;
-
+  const threshold = getLightThreshold();
+  if (b<threshold) baselineLow = baselineLow*0.97 + b*0.03;
   const isOn = b > threshold;
 
   // Light meter
   document.getElementById('lightMeter').style.width =
-    Math.min(100, Math.max(0, ((b - baselineLow) / Math.max(range, 20)) * 100)) + '%';
+    Math.min(100, Math.max(0, ((b-baselineLow)/Math.max(baselineHigh-baselineLow,20))*100))+'%';
 
-  // Rising edge
-  if (isOn && !lightOn) {
-    lightOn = true;
-    clearTimeout(charTimer); clearTimeout(wordTimer);
-    const offDur = lightOffTime > 0 ? now - lightOffTime : 0;
-    if (offDur > dotUnit * 5)       { flushChar(); flushWord(); }
-    else if (offDur > dotUnit * 2)  { flushChar(); }
-    lightOnTime = now;
+  // Flash indicator
+  const dot = document.getElementById('rxDot');
+  dot.style.background  = isOn ? '#ffe066' : '#333';
+  dot.style.boxShadow   = isOn ? '0 0 10px #ffe066' : 'none';
+
+  if (calibMode) {
+    processCalibrateFrame(isOn, now);
+  } else {
+    processDecodeFrame(isOn, now);
   }
-  // Falling edge
-  else if (!isOn && lightOn) {
-    lightOn = false;
-    const onDur = now - lightOnTime;
-    lightOffTime = now;
+}
 
-    const sym = onDur > dotUnit * 2 ? '-' : '.';
+function processCalibrateFrame(isOn, now) {
+  if (isOn && !calibLightOn) {
+    calibLightOn=true;
+    const offDur = calibLastOff>0 ? now-calibLastOff : 0;
+    if (offDur>20 && offDur<5000) calibGaps.push(offDur);
+    calibLightOnTime=now;
+    document.getElementById('rxStatus').textContent = '🔦 Flash detected, collecting...';
+  } else if (!isOn && calibLightOn) {
+    calibLightOn=false;
+    const onDur = now-calibLightOnTime;
+    calibLastOff=now;
+    if (onDur>15 && onDur<3000) {
+      calibPulses.push(onDur);
+      document.getElementById('rxStatus').textContent = `Pulses captured: ${calibPulses.length}`;
+    }
+  }
+  // Auto-finish after 60 pulses
+  if (calibPulses.length>=60) {
+    finishCalib();
+    stopCamera();
+  }
+}
+
+function processDecodeFrame(isOn, now) {
+  document.getElementById('rxStatus').textContent = isOn ? '🔦 Flash!' : 'Listening...';
+
+  // Use calibrated thresholds or fallback to dotUnit-based estimates
+  const ddMid   = dotDashMid>0 ? dotDashMid  : dotUnit*2;
+  const sgMid   = symGapMid>0  ? symGapMid   : dotUnit*2;
+  const wordThr = sgMid * 2.5;
+
+  if (isOn && !lightOn) {
+    lightOn=true;
+    clearTimeout(charTimer); clearTimeout(wordTimer);
+    const offDur = lightOffTime>0 ? now-lightOffTime : 0;
+    if (offDur>wordThr)       { flushChar(); flushWord(); }
+    else if (offDur>sgMid)    { flushChar(); }
+    lightOnTime=now;
+  } else if (!isOn && lightOn) {
+    lightOn=false;
+    const onDur = now-lightOnTime;
+    lightOffTime=now;
+
+    if (onDur < 15) return; // noise filter
+
+    const sym = onDur > ddMid ? '-' : '.';
     rxMorseBuffer += sym;
 
-    // Auto-calibrate dot unit from short pulses
-    if (sym === '.' && onDur > 20 && onDur < dotUnit * 2) {
-      dotUnit = Math.round(dotUnit * 0.8 + onDur * 1.2 * 0.2);
+    // If not calibrated, auto-learn dot unit
+    if (!calibrated && sym==='.' && onDur>20) {
+      dotUnit = Math.round(dotUnit*0.8 + onDur*1.2*0.2);
     }
 
     document.getElementById('receive-morse').textContent =
-      (rxTextBuffer ? '[' + rxTextBuffer.trim() + '] ' : '') + rxMorseBuffer || '—';
+      (rxTextBuffer ? '['+rxTextBuffer.trim()+'] ' : '') + rxMorseBuffer || '—';
 
-    charTimer = setTimeout(() => flushChar(), dotUnit * 3.5);
-    wordTimer = setTimeout(() => flushWord(), dotUnit * 7);
+    charTimer = setTimeout(()=>flushChar(), sgMid*1.2);
+    wordTimer = setTimeout(()=>flushWord(), wordThr);
   }
-
-  // Visual flash indicator
-  const dot = document.getElementById('rxDot');
-  dot.style.background   = isOn ? '#ffe066' : '#333';
-  dot.style.boxShadow    = isOn ? '0 0 10px #ffe066' : 'none';
-  document.getElementById('rxStatus').textContent = isOn ? '🔦 Flash detected!' : 'Listening...';
 }
 
 function flushChar() {
   if (!rxMorseBuffer) return;
   rxTextBuffer += MORSE_REV[rxMorseBuffer] || '?';
-  document.getElementById('receive-output').textContent = rxTextBuffer.trim() || '—';
-  rxMorseBuffer = '';
-  document.getElementById('receive-morse').textContent = rxMorseBuffer || '—';
+  document.getElementById('receive-output').textContent = rxTextBuffer.trim()||'—';
+  rxMorseBuffer='';
+  document.getElementById('receive-morse').textContent='—';
 }
 function flushWord() {
   flushChar();
-  rxTextBuffer += ' ';
-  document.getElementById('receive-output').textContent = rxTextBuffer.trim() || '—';
+  rxTextBuffer+=' ';
+  document.getElementById('receive-output').textContent = rxTextBuffer.trim()||'—';
 }
 function clearReceived() {
   clearTimeout(charTimer); clearTimeout(wordTimer);
-  rxMorseBuffer = ''; rxTextBuffer = '';
-  document.getElementById('receive-morse').textContent = '—';
-  document.getElementById('receive-output').textContent = '—';
-  baselineLow = 999; baselineHigh = 0; dotUnit = 130;
-  calibrating = true; calibFrames = 0;
-  if (rxActive) document.getElementById('rxStatus').textContent = 'Calibrating...';
+  rxMorseBuffer=''; rxTextBuffer='';
+  document.getElementById('receive-morse').textContent='—';
+  document.getElementById('receive-output').textContent='—';
+  if (!calibrated) { dotUnit=130; dotDashMid=0; symGapMid=0; }
+  brightCalibDone=false; brightCalibFrames=0;
+  baselineLow=999; baselineHigh=0;
+  if (rxActive) document.getElementById('rxStatus').textContent='Recalibrating brightness...';
 }
 
 function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t,i) =>
-    t.classList.toggle('active', ['send','receive','ref'][i] === tab));
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-' + tab).classList.add('active');
+  document.querySelectorAll('.tab').forEach((t,i)=>
+    t.classList.toggle('active',['send','receive','ref'][i]===tab));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
 }
 </script>
 </body>
