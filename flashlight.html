@@ -116,24 +116,6 @@
       color: var(--accent);
     }
 
-    .speed-control {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .speed-control input[type="range"] {
-      flex: 1;
-      accent-color: var(--accent);
-      height: 6px;
-    }
-    .speed-value {
-      font-weight: 700;
-      color: var(--accent);
-      min-width: 55px;
-      text-align: right;
-      font-size: 0.9rem;
-    }
-
     .tx-btn {
       width: 100%;
       padding: 16px;
@@ -330,30 +312,6 @@
       word-break: break-all;
     }
 
-    .rx-controls {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-    .rx-control label {
-      display: block;
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 4px;
-    }
-    .rx-control input[type="range"] {
-      width: 100%;
-      accent-color: var(--accent);
-    }
-    .rx-control .val {
-      font-size: 0.8rem;
-      color: var(--accent);
-      font-weight: 600;
-    }
-
     .rx-status {
       text-align: center;
       font-size: 0.85rem;
@@ -361,6 +319,10 @@
       min-height: 22px;
       margin-bottom: 12px;
     }
+    .rx-status.phase-waiting { color: var(--text-dim); }
+    .rx-status.phase-calibrating { color: var(--accent); }
+    .rx-status.phase-decoding { color: var(--success); }
+    .rx-status.phase-ended { color: var(--accent); }
 
     .clear-btn {
       width: 100%;
@@ -474,16 +436,6 @@
     <div class="morse-preview" id="morsePreview"></div>
   </div>
 
-  <div class="input-group">
-    <label>Speed</label>
-    <div class="speed-control">
-      <span style="font-size:0.8rem;color:var(--text-dim)">Slow</span>
-      <input type="range" id="txSpeed" min="40" max="200" value="100">
-      <span style="font-size:0.8rem;color:var(--text-dim)">Fast</span>
-      <span class="speed-value" id="txSpeedVal">100 ms</span>
-    </div>
-  </div>
-
   <div class="flash-indicator" id="flashIndicator"></div>
   <div class="current-char" id="currentChar"></div>
   <div class="current-morse" id="currentMorse"></div>
@@ -492,7 +444,7 @@
   <div class="tx-status" id="txStatus"></div>
 
   <div class="info-box">
-    <strong>Tip:</strong> This uses your phone's rear flashlight (torch). On devices without torch support, the screen will flash white instead. Point the flashlight at the receiving phone's camera.
+    <strong>Tip:</strong> This uses your phone's rear flashlight (torch). On devices without torch support, the screen will flash white instead. A calibration pulse is sent automatically before and after your message so the receiver can auto-detect sensitivity and speed.
   </div>
 
   <details class="ref-card">
@@ -504,7 +456,7 @@
 <!-- RECEIVE PANEL -->
 <div class="panel" id="panelReceive">
   <div class="info-box">
-    Point your camera at the transmitting phone's flashlight. Keep the light source centered in the circle. Tap <strong>Start Listening</strong> to begin decoding.
+    Point your camera at the transmitting phone's flashlight. Keep the light source centered in the circle. Tap <strong>Start Listening</strong> and then start the transmitter. The calibration pulse will auto-configure sensitivity and timing.
   </div>
 
   <div class="camera-container">
@@ -523,19 +475,6 @@
       <span>Dark</span>
       <span id="brightnessVal">0</span>
       <span>Bright</span>
-    </div>
-  </div>
-
-  <div class="rx-controls">
-    <div class="rx-control">
-      <label>Sensitivity</label>
-      <input type="range" id="rxSensitivity" min="5" max="80" value="30">
-      <span class="val" id="rxSensVal">30</span>
-    </div>
-    <div class="rx-control">
-      <label>Expected Speed</label>
-      <input type="range" id="rxSpeed" min="40" max="200" value="100">
-      <span class="val" id="rxSpeedVal">100 ms</span>
     </div>
   </div>
 
@@ -592,6 +531,10 @@ function morseToText(morse) {
   ).join(' ');
 }
 
+// ===== CONSTANTS =====
+const UNIT_MS = 100;           // Fixed dot duration (ms)
+const LONG_PULSE_UNITS = 30;   // Calibration long pulse = 30 units (10x dash)
+
 // ===== MODE SWITCHING =====
 const tabs = document.querySelectorAll('.mode-tab');
 const panels = document.querySelectorAll('.panel');
@@ -620,8 +563,6 @@ for (const [char, code] of Object.entries(MORSE_TABLE)) {
 // ===== TRANSMITTER =====
 const txInput = document.getElementById('txInput');
 const morsePreview = document.getElementById('morsePreview');
-const txSpeedSlider = document.getElementById('txSpeed');
-const txSpeedVal = document.getElementById('txSpeedVal');
 const txBtn = document.getElementById('txBtn');
 const txStatus = document.getElementById('txStatus');
 const flashIndicator = document.getElementById('flashIndicator');
@@ -636,10 +577,6 @@ let torchSupported = false;
 
 txInput.addEventListener('input', () => {
   morsePreview.textContent = textToMorse(txInput.value);
-});
-
-txSpeedSlider.addEventListener('input', () => {
-  txSpeedVal.textContent = txSpeedSlider.value + ' ms';
 });
 
 async function initTorch() {
@@ -688,18 +625,57 @@ function sleep(ms, signal) {
   });
 }
 
+// Calibration sequence: long pulse (30 units) → 3-unit gap → dash → 1-unit gap → dash → 3-unit gap → dot → 1-unit gap → dot → 3-unit gap
+async function transmitCalibration(unitMs, signal) {
+  // Long pulse (30 units = 10x dash)
+  await setTorch(true);
+  await sleep(unitMs * LONG_PULSE_UNITS, signal);
+  await setTorch(false);
+  await sleep(unitMs * 3, signal);   // character gap
+
+  // First dash
+  await setTorch(true);
+  await sleep(unitMs * 3, signal);
+  await setTorch(false);
+  await sleep(unitMs, signal);       // inter-element gap
+
+  // Second dash
+  await setTorch(true);
+  await sleep(unitMs * 3, signal);
+  await setTorch(false);
+  await sleep(unitMs * 3, signal);   // character gap
+
+  // First dot
+  await setTorch(true);
+  await sleep(unitMs, signal);
+  await setTorch(false);
+  await sleep(unitMs, signal);       // inter-element gap
+
+  // Second dot
+  await setTorch(true);
+  await sleep(unitMs, signal);
+  await setTorch(false);
+  await sleep(unitMs * 3, signal);   // trailing gap before message / end
+}
+
 async function transmitMorse(text, unitMs, signal) {
-  const morse = textToMorse(text);
   const chars = text.toUpperCase().split('');
   const morseParts = chars.map(ch => {
     if (ch === ' ') return { char: ' ', morse: '/' };
     return { char: ch, morse: MORSE_TABLE[ch] || '' };
   }).filter(p => p.morse);
 
-  // Lead-in: short pause
+  // Lead-in pause
   txStatus.textContent = 'Starting in 1 second...';
   await sleep(1000, signal);
 
+  // === START CALIBRATION ===
+  currentChar.textContent = '[CAL]';
+  currentMorse.textContent = '';
+  txStatus.textContent = 'Sending calibration...';
+  await transmitCalibration(unitMs, signal);
+
+  // === MESSAGE ===
   for (let ci = 0; ci < morseParts.length; ci++) {
     const { char, morse } = morseParts[ci];
     currentChar.textContent = char === ' ' ? '[space]' : char;
@@ -732,8 +708,14 @@ async function transmitMorse(text, unitMs, signal) {
     }
   }
 
-  // End signal: extra long pause
+  // Gap before end calibration
   await sleep(unitMs * 7, signal);
+
+  // === END CALIBRATION ===
+  currentChar.textContent = '[END]';
+  currentMorse.textContent = '';
+  txStatus.textContent = 'Sending end signal...';
+  await transmitCalibration(unitMs, signal);
 }
 
 async function toggleTransmit() {
@@ -761,7 +743,7 @@ async function toggleTransmit() {
   }
 
   try {
-    await transmitMorse(text, parseInt(txSpeedSlider.value), txAbort.signal);
+    await transmitMorse(text, UNIT_MS, txAbort.signal);
     txStatus.textContent = 'Transmission complete!';
   } catch (e) {
     if (e.name === 'AbortError') {
@@ -787,10 +769,6 @@ const rxCtx = rxCanvas.getContext('2d', { willReadFrequently: true });
 const brightnessFill = document.getElementById('brightnessFill');
 const thresholdLine = document.getElementById('thresholdLine');
 const brightnessVal = document.getElementById('brightnessVal');
-const rxSensitivity = document.getElementById('rxSensitivity');
-const rxSensVal = document.getElementById('rxSensVal');
-const rxSpeedSlider = document.getElementById('rxSpeed');
-const rxSpeedValEl = document.getElementById('rxSpeedVal');
 const rxBtn = document.getElementById('rxBtn');
 const rxStatus = document.getElementById('rxStatus');
 const decodedMorse = document.getElementById('decodedMorse');
@@ -800,47 +778,73 @@ let receiving = false;
 let rxStream = null;
 let rxAnimFrame = null;
 
+// Receiver phases
+const PHASE = { WAITING: 'WAITING', CALIBRATING: 'CALIBRATING', DECODING: 'DECODING', ENDED: 'ENDED' };
+
 // Receiver state
-let rxState = {
-  isOn: false,
-  lastChange: 0,
-  symbols: '',        // current character's dots/dashes
-  morseChars: [],     // completed morse characters
-  currentWord: [],    // characters in current word
-  words: [],          // completed words
-  brightnessHistory: [],
-  minBrightness: 255,
-  maxBrightness: 0,
-  adaptiveMin: 50,
-  adaptiveMax: 200,
-  lastBrightness: 0,
-  debounceCount: 0,
-};
+let rxState = {};
 
 function resetRxState() {
   rxState = {
+    phase: PHASE.WAITING,
+
+    // Brightness tracking
     isOn: false,
     lastChange: 0,
-    symbols: '',
-    morseChars: [],
-    currentWord: [],
-    words: [],
     brightnessHistory: [],
-    minBrightness: 255,
-    maxBrightness: 0,
-    adaptiveMin: 50,
-    adaptiveMax: 200,
-    lastBrightness: 0,
+    ambientBrightness: 0,    // baseline ambient level
+    onBrightness: 0,         // brightness during long pulse
+    offBrightness: 0,        // brightness during OFF
+    threshold: 128,          // auto-calculated from calibration
     debounceCount: 0,
+
+    // Waiting phase
+    waitingSamples: [],      // collect ambient samples before signal
+    longPulseStart: 0,       // when the long pulse ON started
+    longPulseDetected: false,
+
+    // Calibration phase
+    calOnDurations: [],      // ON durations collected from -- .. pattern
+    calOffDurations: [],     // OFF durations for reference
+    calElementCount: 0,      // how many ON elements we've collected (target: 4)
+
+    // Calibrated timing
+    calibratedDotMs: 0,
+    calibratedDashMs: 0,
+    calibratedUnitMs: 0,
+
+    // Decoding phase
+    symbols: '',             // current character's dots/dashes
+    morseChars: [],          // completed morse characters
+    currentWord: [],         // characters in current word
+    words: [],               // completed words
   };
 }
 
-rxSensitivity.addEventListener('input', () => {
-  rxSensVal.textContent = rxSensitivity.value;
-});
-rxSpeedSlider.addEventListener('input', () => {
-  rxSpeedValEl.textContent = rxSpeedSlider.value + ' ms';
-});
+function setRxPhase(phase) {
+  rxState.phase = phase;
+  const statusEl = rxStatus;
+  statusEl.className = 'rx-status';
+
+  switch (phase) {
+    case PHASE.WAITING:
+      statusEl.classList.add('phase-waiting');
+      statusEl.textContent = 'Waiting for calibration signal...';
+      break;
+    case PHASE.CALIBRATING:
+      statusEl.classList.add('phase-calibrating');
+      statusEl.textContent = 'Calibrating timing...';
+      break;
+    case PHASE.DECODING:
+      statusEl.classList.add('phase-decoding');
+      statusEl.textContent = 'Decoding message...';
+      break;
+    case PHASE.ENDED:
+      statusEl.classList.add('phase-ended');
+      statusEl.textContent = 'Message complete!';
+      break;
+  }
+}
 
 async function startCamera() {
   try {
@@ -882,7 +886,6 @@ function sampleBrightness() {
   let totalBrightness = 0;
   let count = 0;
   for (let i = 0; i < data.length; i += 4) {
-    // Luminance: 0.299R + 0.587G + 0.114B
     const lum = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
     totalBrightness += lum;
     count++;
@@ -891,48 +894,211 @@ function sampleBrightness() {
   return count > 0 ? totalBrightness / count : 0;
 }
 
+function getSmoothedBrightness(brightness) {
+  rxState.brightnessHistory.push(brightness);
+  if (rxState.brightnessHistory.length > 5) rxState.brightnessHistory.shift();
+  return rxState.brightnessHistory.reduce((a, b) => a + b) / rxState.brightnessHistory.length;
+}
+
+function updateBrightnessUI(smoothed) {
+  const range = Math.max(rxState.onBrightness - rxState.offBrightness, rxState.threshold > 0 ? 1 : 50);
+  const min = rxState.offBrightness || 0;
+  const barPct = Math.min(100, Math.max(0, ((smoothed - min) / range) * 100));
+  brightnessFill.style.width = barPct + '%';
+  brightnessFill.className = 'brightness-bar-fill ' + (smoothed > rxState.threshold ? 'bright' : 'dim');
+
+  // Position threshold line
+  const threshPct = Math.min(100, Math.max(0, ((rxState.threshold - min) / range) * 100));
+  thresholdLine.style.left = threshPct + '%';
+  brightnessVal.textContent = Math.round(smoothed);
+}
+
 function processFrame() {
   if (!receiving) return;
 
   const brightness = sampleBrightness();
   const now = performance.now();
+  const smoothed = getSmoothedBrightness(brightness);
 
-  // Update adaptive min/max with decay
-  rxState.adaptiveMin = rxState.adaptiveMin * 0.995 + brightness * 0.005;
-  rxState.adaptiveMax = rxState.adaptiveMax * 0.995 + brightness * 0.005;
-  if (brightness < rxState.adaptiveMin) rxState.adaptiveMin = brightness;
-  if (brightness > rxState.adaptiveMax) rxState.adaptiveMax = brightness;
+  updateBrightnessUI(smoothed);
 
-  // Smoothed brightness (simple moving average)
-  rxState.brightnessHistory.push(brightness);
-  if (rxState.brightnessHistory.length > 5) rxState.brightnessHistory.shift();
-  const smoothed = rxState.brightnessHistory.reduce((a, b) => a + b) / rxState.brightnessHistory.length;
+  switch (rxState.phase) {
+    case PHASE.WAITING:
+      processWaiting(smoothed, now);
+      break;
+    case PHASE.CALIBRATING:
+      processCalibrating(smoothed, now);
+      break;
+    case PHASE.DECODING:
+      processDecoding(smoothed, now);
+      break;
+    case PHASE.ENDED:
+      // Do nothing, message is complete
+      break;
+  }
 
-  // Calculate threshold
-  const range = rxState.adaptiveMax - rxState.adaptiveMin;
-  const sensitivity = parseInt(rxSensitivity.value);
-  const threshold = rxState.adaptiveMin + range * (sensitivity / 100);
+  rxAnimFrame = requestAnimationFrame(processFrame);
+}
 
-  // Update UI
-  const barPct = Math.min(100, Math.max(0, ((smoothed - rxState.adaptiveMin) / (range || 1)) * 100));
-  brightnessFill.style.width = barPct + '%';
-  brightnessFill.className = 'brightness-bar-fill ' + (smoothed > threshold ? 'bright' : 'dim');
-  thresholdLine.style.left = (sensitivity) + '%';
-  brightnessVal.textContent = Math.round(smoothed);
+// ===== WAITING PHASE =====
+// Collect ambient samples. Detect the start of the long calibration pulse.
+function processWaiting(smoothed, now) {
+  // Collect ambient brightness samples for baseline
+  rxState.waitingSamples.push(smoothed);
+  if (rxState.waitingSamples.length > 60) rxState.waitingSamples.shift(); // ~1 second of samples
 
-  const isOn = smoothed > threshold;
+  // Calculate ambient baseline
+  const ambient = rxState.waitingSamples.reduce((a, b) => a + b) / rxState.waitingSamples.length;
+  rxState.ambientBrightness = ambient;
+
+  // Dynamic threshold: ambient + 30% of ambient (or minimum 15 brightness units)
+  const dynamicThreshold = ambient + Math.max(ambient * 0.3, 15);
+  rxState.threshold = dynamicThreshold;
+  rxState.offBrightness = ambient;
+
+  const isOn = smoothed > dynamicThreshold;
+
+  if (isOn && !rxState.isOn) {
+    // Transition to ON — possible start of long pulse
+    rxState.longPulseStart = now;
+    rxState.isOn = true;
+  } else if (!isOn && rxState.isOn) {
+    // Transition to OFF — check if the ON period was long enough to be the calibration pulse
+    const onDuration = now - rxState.longPulseStart;
+
+    if (onDuration > 1000) {
+      // This was the long pulse! (>1 second = clearly not a normal dot/dash)
+      // Record the ON brightness level for threshold calibration
+      rxState.onBrightness = smoothed > ambient ? (ambient + smoothed) / 2 : ambient + 30;
+      // Recalculate on brightness from recent peaks
+      const recentMax = Math.max(...rxState.brightnessHistory);
+      rxState.onBrightness = recentMax;
+      rxState.offBrightness = ambient;
+      rxState.threshold = (rxState.onBrightness + rxState.offBrightness) / 2;
+
+      // Move to calibrating phase
+      rxState.isOn = false;
+      rxState.lastChange = now;
+      rxState.calOnDurations = [];
+      rxState.calOffDurations = [];
+      rxState.calElementCount = 0;
+      setRxPhase(PHASE.CALIBRATING);
+      return;
+    }
+
+    // Not long enough, reset
+    rxState.isOn = false;
+  }
+
+  // Track ON brightness for better threshold during the pulse
+  if (rxState.isOn && rxState.longPulseStart > 0) {
+    const onDuration = now - rxState.longPulseStart;
+    if (onDuration > 500) {
+      // We're likely in the long pulse - update ON brightness
+      rxState.onBrightness = smoothed;
+      rxState.threshold = (rxState.onBrightness + rxState.ambientBrightness) / 2;
+    }
+  }
+}
+
+// ===== CALIBRATING PHASE =====
+// Collect 4 ON durations from the -- .. pattern to calibrate timing.
+function processCalibrating(smoothed, now) {
+  const isOn = smoothed > rxState.threshold;
+
+  if (isOn !== rxState.isOn) {
+    rxState.debounceCount++;
+    if (rxState.debounceCount >= 2) {
+      const duration = now - rxState.lastChange;
+
+      if (rxState.isOn && !isOn) {
+        // Was ON, now OFF — record this ON duration
+        if (duration > 20) {
+          rxState.calOnDurations.push(duration);
+          rxState.calElementCount++;
+        }
+      } else if (!rxState.isOn && isOn) {
+        // Was OFF, now ON — record OFF duration
+        if (duration > 20) {
+          rxState.calOffDurations.push(duration);
+        }
+      }
+
+      rxState.isOn = isOn;
+      rxState.lastChange = now;
+      rxState.debounceCount = 0;
+
+      // Check if we have all 4 calibration elements (2 dashes + 2 dots)
+      if (rxState.calElementCount >= 4) {
+        finishCalibration();
+      }
+    }
+  } else {
+    rxState.debounceCount = 0;
+  }
+
+  // Timeout: if we've been calibrating too long without getting 4 elements, reset
+  if (rxState.calElementCount === 0 && !rxState.isOn && (now - rxState.lastChange) > 5000) {
+    // Timeout, go back to waiting
+    resetRxState();
+    setRxPhase(PHASE.WAITING);
+  }
+}
+
+function finishCalibration() {
+  const durations = rxState.calOnDurations;
+
+  // Sort durations to separate dashes (longer) from dots (shorter)
+  // We expect: [dash, dash, dot, dot] in order, but let's be robust
+  const sorted = [...durations].sort((a, b) => a - b);
+
+  // The two shortest are dots, two longest are dashes
+  const dotMs = (sorted[0] + sorted[1]) / 2;
+  const dashMs = (sorted[2] + sorted[3]) / 2;
+
+  // Derive unit time: average of dot duration and dash/3
+  const unitMs = (dotMs + dashMs / 3) / 2;
+
+  rxState.calibratedDotMs = dotMs;
+  rxState.calibratedDashMs = dashMs;
+  rxState.calibratedUnitMs = unitMs;
+
+  // Reset decode state
+  rxState.symbols = '';
+  rxState.morseChars = [];
+  rxState.currentWord = [];
+  rxState.words = [];
+  rxState.lastChange = performance.now();
+
+  setRxPhase(PHASE.DECODING);
+}
+
+// ===== DECODING PHASE =====
+function processDecoding(smoothed, now) {
+  const isOn = smoothed > rxState.threshold;
+  const unitMs = rxState.calibratedUnitMs;
+  const dashMs = rxState.calibratedDashMs;
 
   // State transition with debounce
   if (isOn !== rxState.isOn) {
     rxState.debounceCount++;
-    if (rxState.debounceCount >= 3) {
+    if (rxState.debounceCount >= 2) {
       const duration = now - rxState.lastChange;
-      const unitMs = parseInt(rxSpeedSlider.value);
 
       if (rxState.lastChange > 0 && duration > 20) {
         if (rxState.isOn) {
           // Was ON, now OFF — classify the ON duration
-          if (duration < unitMs * 2) {
+          if (duration > dashMs * 5) {
+            // End-of-message long pulse detected!
+            // Flush any pending symbols before ending
+            finishCharacter();
+            finishWord();
+            setRxPhase(PHASE.ENDED);
+            rxState.isOn = isOn;
+            rxState.lastChange = now;
+            rxState.debounceCount = 0;
+            return;
+          } else if (duration < unitMs * 2) {
             rxState.symbols += '.';
           } else {
             rxState.symbols += '-';
@@ -963,7 +1129,6 @@ function processFrame() {
   // Check for extended silence to finalize pending symbols
   if (!rxState.isOn && rxState.symbols.length > 0) {
     const silenceDuration = now - rxState.lastChange;
-    const unitMs = parseInt(rxSpeedSlider.value);
 
     if (silenceDuration > unitMs * 5) {
       finishCharacter();
@@ -972,11 +1137,9 @@ function processFrame() {
       finishCharacter();
     }
   }
-
-  rxState.lastBrightness = smoothed;
-  rxAnimFrame = requestAnimationFrame(processFrame);
 }
 
+// ===== DECODE HELPERS =====
 function finishCharacter() {
   if (rxState.symbols.length === 0) return;
   const decoded = REVERSE_MORSE[rxState.symbols] || '?';
@@ -1008,6 +1171,7 @@ function updateDecodedDisplay() {
   decodedText.textContent = completedWords + (completedWords && currentWord ? ' ' : '') + currentWord;
 }
 
+// ===== RECEIVE CONTROLS =====
 async function toggleReceive() {
   if (receiving) {
     receiving = false;
@@ -1016,6 +1180,7 @@ async function toggleReceive() {
     rxBtn.textContent = 'Start Listening';
     rxBtn.className = 'rx-btn start';
     rxStatus.textContent = 'Camera inactive';
+    rxStatus.className = 'rx-status';
     return;
   }
 
@@ -1027,17 +1192,18 @@ async function toggleReceive() {
   resetRxState();
   rxBtn.textContent = 'Stop Listening';
   rxBtn.className = 'rx-btn stop';
-  rxStatus.textContent = 'Listening for Morse code...';
 
   // Let camera stabilize
   await new Promise(r => setTimeout(r, 500));
 
-  // Initialize adaptive range from initial brightness
+  // Initialize with ambient brightness
   const initialBrightness = sampleBrightness();
-  rxState.adaptiveMin = initialBrightness;
-  rxState.adaptiveMax = initialBrightness + 1;
+  rxState.ambientBrightness = initialBrightness;
+  rxState.offBrightness = initialBrightness;
+  rxState.threshold = initialBrightness + Math.max(initialBrightness * 0.3, 15);
   rxState.lastChange = performance.now();
 
+  setRxPhase(PHASE.WAITING);
   rxAnimFrame = requestAnimationFrame(processFrame);
 }
 
@@ -1045,6 +1211,9 @@ function clearDecoded() {
   resetRxState();
   decodedMorse.textContent = '';
   decodedText.textContent = '';
+  if (receiving) {
+    setRxPhase(PHASE.WAITING);
+  }
 }
 </script>
 </body>
